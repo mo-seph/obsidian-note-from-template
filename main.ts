@@ -26,12 +26,11 @@ export default class FromTemplatePlugin extends Plugin {
 	settings: MyPluginSettings;
 	templateDir: string = "templates"
 
-	async onload() {
+	async onLayoutReady() {
 		console.log('loading plugin');
 
 		await this.loadSettings();
-		// Bit of a hack, but we need the Vault to load before we can set up commands
-		setTimeout(() => this.addTemplates(), 1000 )
+		this.addTemplates()
 		this.addSettingTab(new FromTemplateSettingTab(this.app, this));
 	}
 
