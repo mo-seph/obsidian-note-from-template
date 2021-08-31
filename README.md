@@ -19,6 +19,7 @@ This would pop up a window requesting a Title, an Organisation and some Tags. It
 
 ## YAML Tags
 | Name | Value | Default |
+| ---- | ----- | ------- |
 | template-id | Unique ID for the template | Lowercase version of the base name |
 | template-name | Name for the command | Base name of the file |
 | tempalte-output | Directory to save the output | test |
