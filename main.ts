@@ -1,6 +1,14 @@
 import { App, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder } from 'obsidian';
 import * as Mustache from 'mustache';
 import metadataParser from 'markdown-yaml-metadata-parser'
+import { tmpdir } from 'os';
+
+console.log("File actually found for Note from Template")
+/*
+ * TODOs:
+ * - figure out why textareas are not working qute right
+ * - add a replacement string for what goes back into the text
+ */
 
 interface MyPluginSettings {
 	templateDirectory: string;
@@ -19,6 +27,7 @@ interface TemplateSpec {
 	name: string; //Name to show for the command (probably same as the template filename, but doesn't have to be)
 	template: string; //Name of the template file
 	directory: string; //Output directory for notes generated from the template
+	replacement: string;
 }
 
 
@@ -26,12 +35,16 @@ export default class FromTemplatePlugin extends Plugin {
 	settings: MyPluginSettings;
 	templateDir: string = "templates"
 
-	async onLayoutReady() {
-		console.log('loading plugin');
-
+	async onload() {
 		await this.loadSettings();
-		this.addTemplates()
 		this.addSettingTab(new FromTemplateSettingTab(this.app, this));
+		this.app.workspace.onLayoutReady(() => this.doLoad());
+	}
+
+	async doLoad() {
+		console.log('Loading FromTemplate Templates');
+		this.addTemplates()
+
 	}
 
 	// Adds all the template commands - calls getTemplates which looks for files in the settings.templateDirectory
@@ -44,7 +57,7 @@ export default class FromTemplatePlugin extends Plugin {
 				name: ts.name,
 				editorCallback: (editor, _ ) => {
 					//This class does all the UI work
-					new FillTemplate(this.app,this,editor,ts.template,ts.directory).open();
+					new FillTemplate(this.app,this,editor,ts).open();
 				}
 			});
 		})
@@ -63,6 +76,7 @@ export default class FromTemplatePlugin extends Plugin {
 					name:result.metadata['template-name'] || fn,
 					template:fn,
 					directory:result.metadata['template-output'] || "test",
+					replacement:result.metadata['template-replacement'] || "[[{{title}}]]",
 				}
 				console.log("Got spec: ",tmpl)
 				return tmpl
@@ -92,6 +106,7 @@ export default class FromTemplatePlugin extends Plugin {
 		const templateFields = [
 			"template-id",
 			"template-name",
+			"template-replacement",
 			"template-output"
 		]
 		templateFields.forEach(tf => {
@@ -117,61 +132,122 @@ export default class FromTemplatePlugin extends Plugin {
 class FillTemplate extends Modal {
 	plugin:FromTemplatePlugin
 	editor:Editor
-	templateName:string
-	targetDir:string
-	constructor(app: App,plugin:FromTemplatePlugin,editor:Editor,template:string,target:string) {
+	spec:TemplateSpec
+	constructor(app: App,plugin:FromTemplatePlugin,editor:Editor,spec:TemplateSpec) {
 		super(app);
 		this.plugin = plugin;
 		this.editor= editor;
-		this.templateName=template
-		this.targetDir=target
+		this.spec = spec;
 	}
 
 	async onOpen() {
 		let {contentEl} = this;
 
+			//And a submit button
+			const submit = contentEl.createDiv()
+			const submitButton = submit.createEl('button', { text: "Add" });
+			//submitButton.style.cssText = 'align: right;';
+
 		// Load the template based on the name given
-		let template = await this.plugin.loadTemplate(this.templateName)
+		let template = await this.plugin.loadTemplate(this.spec.name)
+		console.log("Got template: \n"+template)
 		// Pull out the tags the Mustache finds
 		const result: Array<Array<any>> = Mustache.parse(template);
+		console.log("Tags: ", result)
 
 		//Create the top of the interface - header and input for Title of the new note
-		contentEl.createEl('h2', { text: "Create from Template: " + this.templateName });
+		contentEl.createEl('h2', { text: "Create from Template: " + this.spec.name });
+		const form = contentEl.createEl('div');
+		/*
 		const titleEl = contentEl.createEl('div');
 		titleEl.createEl('span',{text:"Title: "});
 		const titleInput = titleEl.createEl('input');
 		titleInput.value = this.editor.getSelection()
 		titleInput.style.cssText = 'float: right;';
+		*/
+
+		const controls:Record<string,() => string> = {};
+
+		this.createInput(form,controls,"title","text",this.editor.getSelection())
 
 		//Now go through and make an input for each field in the template
-		const controls:Record<string,HTMLInputElement> = {"title":titleInput}
+		//const controls:Record<string,HTMLInputElement> = {"title":titleInput}
 		result.forEach( r => {
 			if( r[0] === "name" && r[1] != "title") {
+				this.createInput(contentEl,controls,r[1])
+				/*
 				const id:string = r[1]
 				const controlEl = contentEl.createEl('div');
 				controlEl.createEl("span", {text: id})
 				const input = controlEl.createEl('input');
 				input.style.cssText = 'float: right;';
 				controls[id] = input
+				*/
 			}
 		})
 
-		//And a submit button
-		const submitButton = contentEl.createEl('button', { text: "Add" });
-		submitButton.style.cssText = 'float: right;';
+	
 
 		//On submit, get the data out of the form, replace the selection in the editor with a link to the current Title, and create the note
 		submitButton.addEventListener('click', () => {
 			const data:Record<string,string> = {}
 			for( const k in controls ) {
-				data[k] = controls[k].value
+				data[k] = controls[k]()
 			}
-			if( this.plugin.settings.replaceSelection )
-				this.editor.replaceRange("[["+data['title']+"]]",this.editor.getCursor("from"), this.editor.getCursor("to"));
-			this.plugin.createNote(this.templateName,this.targetDir,data['title'],data);
+			if( this.plugin.settings.replaceSelection && (this.spec.replacement !== "none") ) {
+				const replaceText = Mustache.render(this.spec.replacement,data)
+				console.log("Replacement text: " + replaceText)
+				console.log("Data: ",data)
+				this.editor.replaceRange(replaceText,this.editor.getCursor("from"), this.editor.getCursor("to"));
+			}
+			this.plugin.createNote(this.spec.name,this.spec.directory,data['title'],data);
 			this.close()
 		});
 
+	}
+
+	/*
+	 * Creates the UI element for putting in the text. Takes a parent HTMLElement, and:
+	 * - creates a div with a title for the control
+	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
+	*/
+	createInput(parent:HTMLElement, controls:Record<string,() => string>, field:string, fieldType:string=null, initial:string=null){
+		const controlEl = parent.createEl('div');
+		const parts = field.split(":");
+		const id = parts[0] || field;
+		const inputType = fieldType || parts[1] || (id === "body" ? "area" : "text" );
+		//const inputType:string = "text"
+
+		controlEl.createEl("span", {text: id})
+		var inputField:HTMLElement;
+		var valueFunc:()=>string = () => ""
+		console.log("Adding " + id + " of type " + inputType)
+		//controls[id] = input
+		switch(inputType) {
+			case "area": {
+				const i = controlEl.createEl('textarea');
+				i.rows = 5;
+				// Doesn't seem to be working :(
+				i.value = initial || id;
+				i.defaultValue = id;
+				valueFunc = () => {
+					return i.value;
+				}
+				inputField = i;
+				break;
+			}
+			case "text": {
+				const i = controlEl.createEl('input');
+				i.value = initial;
+				valueFunc = () => i.value
+				inputField = i;
+				break;
+			}
+		}
+		if(inputField) {
+			inputField.style.cssText = 'float: right;';
+		}
+		controls[field] = valueFunc
 	}
 
 	onClose() {
