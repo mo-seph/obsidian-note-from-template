@@ -1,1 +1,24 @@
 /* Sets all the text color to red! */
+
+
+/* Submit button */
+
+.from-template-submit {
+    font-size:x-large;
+}
+
+.from-template-label {
+    font-size:large;
+    vertical-align: top;
+}
+
+.from-template-control {
+    font-size:large;
+    width: 300pt;
+    padding: 0;
+}
+
+.from-template-section {
+    padding: 6pt;
+    text-align:right;
+}

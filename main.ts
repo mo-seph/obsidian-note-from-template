@@ -1,5 +1,7 @@
 import { App, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder } from 'obsidian';
+// @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
+// @ts-ignore - not sure how to build a proper typescript def yet
 import metadataParser from 'markdown-yaml-metadata-parser'
 import { tmpdir } from 'os';
 
@@ -27,7 +29,7 @@ interface TemplateSpec {
 	name: string; //Name to show for the command (probably same as the template filename, but doesn't have to be)
 	template: string; //Name of the template file
 	directory: string; //Output directory for notes generated from the template
-	replacement: string;
+	replacement: string; //A template string for the text that will be inserted in the editor
 }
 
 
@@ -143,10 +145,7 @@ class FillTemplate extends Modal {
 	async onOpen() {
 		let {contentEl} = this;
 
-			//And a submit button
-			const submit = contentEl.createDiv()
-			const submitButton = submit.createEl('button', { text: "Add" });
-			//submitButton.style.cssText = 'align: right;';
+		
 
 		// Load the template based on the name given
 		let template = await this.plugin.loadTemplate(this.spec.name)
@@ -157,6 +156,7 @@ class FillTemplate extends Modal {
 
 		//Create the top of the interface - header and input for Title of the new note
 		contentEl.createEl('h2', { text: "Create from Template: " + this.spec.name });
+		contentEl.createEl('h4', { text: "Destination: " + this.spec.directory });
 		const form = contentEl.createEl('div');
 		/*
 		const titleEl = contentEl.createEl('div');
@@ -168,7 +168,8 @@ class FillTemplate extends Modal {
 
 		const controls:Record<string,() => string> = {};
 
-		this.createInput(form,controls,"title","text",this.editor.getSelection())
+		this.createInput(form,controls,"title","text",this.editor.getSelection()
+			.replace(/[^a-zA-Z0-9 -:]/g,"")) //Quick and dirty regex for good titles
 
 		//Now go through and make an input for each field in the template
 		//const controls:Record<string,HTMLInputElement> = {"title":titleInput}
@@ -187,7 +188,10 @@ class FillTemplate extends Modal {
 		})
 
 	
-
+		//And a submit button
+		const submit = contentEl.createDiv({cls:"from-template-section"})
+		const submitButton = submit.createEl('button', { text: "Add", cls:"from-template-submit" });
+		//submitButton.style.cssText = 'align: right;';
 		//On submit, get the data out of the form, replace the selection in the editor with a link to the current Title, and create the note
 		submitButton.addEventListener('click', () => {
 			const data:Record<string,string> = {}
@@ -212,21 +216,25 @@ class FillTemplate extends Modal {
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
 	createInput(parent:HTMLElement, controls:Record<string,() => string>, field:string, fieldType:string=null, initial:string=null){
-		const controlEl = parent.createEl('div');
+		const controlEl = parent.createEl('div',{cls:"from-template-section"});
 		const parts = field.split(":");
 		const id = parts[0] || field;
 		const inputType = fieldType || parts[1] || (id === "body" ? "area" : "text" );
 		//const inputType:string = "text"
 
-		controlEl.createEl("span", {text: id})
+		const labelText = id[0].toUpperCase() + id.substring(1) + ": ";
+		const label = controlEl.createEl("label", {text: labelText, cls:"from-template-label"})
+		label.htmlFor = id
 		var inputField:HTMLElement;
 		var valueFunc:()=>string = () => ""
 		console.log("Adding " + id + " of type " + inputType)
 		//controls[id] = input
 		switch(inputType) {
 			case "area": {
-				const i = controlEl.createEl('textarea');
+				const i = controlEl.createEl('textarea', {cls:"from-template-control"});
+				i.id = id
 				i.rows = 5;
+				i.cols = 50;
 				// Doesn't seem to be working :(
 				i.value = initial || id;
 				i.defaultValue = id;
@@ -237,7 +245,9 @@ class FillTemplate extends Modal {
 				break;
 			}
 			case "text": {
-				const i = controlEl.createEl('input');
+				const i = controlEl.createEl('input', {cls:"from-template-control"});
+				i.id = id
+				i.size = 50
 				i.value = initial;
 				valueFunc = () => i.value
 				inputField = i;
@@ -245,7 +255,7 @@ class FillTemplate extends Modal {
 			}
 		}
 		if(inputField) {
-			inputField.style.cssText = 'float: right;';
+			//inputField.style.cssText = 'float: right;';
 		}
 		controls[field] = valueFunc
 	}
