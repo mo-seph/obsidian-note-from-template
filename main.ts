@@ -4,8 +4,11 @@ import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import metadataParser from 'markdown-yaml-metadata-parser'
 import { tmpdir } from 'os';
+import { strictEqual } from 'assert';
 
-console.log("File actually found for Note from Template")
+// Stop mustache from escaping HTML entities as we are generating Markdown
+Mustache.escape = function(text:string) {return text;};
+
 /*
  * TODOs:
  * - figure out why textareas are not working qute right
@@ -35,23 +38,18 @@ interface TemplateSpec {
 
 export default class FromTemplatePlugin extends Plugin {
 	settings: MyPluginSettings;
-	templateDir: string = "templates"
+	//templateDir: string = "templates"
 
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new FromTemplateSettingTab(this.app, this));
-		this.app.workspace.onLayoutReady(() => this.doLoad());
-	}
-
-	async doLoad() {
-		console.log('Loading FromTemplate Templates');
-		this.addTemplates()
-
+		this.app.workspace.onLayoutReady(() => this.addTemplates());
 	}
 
 	// Adds all the template commands - calls getTemplates which looks for files in the settings.templateDirectory
 	async addTemplates() {
 		const templates = await this.getTemplates()
+		console.log("Got templates! ",templates)
 		templates.forEach(async t => {
 			const ts = (await t) as TemplateSpec
 			this.addCommand( {
@@ -64,6 +62,7 @@ export default class FromTemplatePlugin extends Plugin {
 			});
 		})
 	}
+
 
 	// Run through the settings directory and return an TemplateSettings for each valid file there
 	async getTemplates() {
@@ -80,11 +79,9 @@ export default class FromTemplatePlugin extends Plugin {
 					directory:result.metadata['template-output'] || "test",
 					replacement:result.metadata['template-replacement'] || "[[{{title}}]]",
 				}
-				console.log("Got spec: ",tmpl)
 				return tmpl
 			}
 		})
-		console.log("Got templates! ",templates)
 		return templates
 		
 	}
@@ -92,15 +89,20 @@ export default class FromTemplatePlugin extends Plugin {
 	async createNote(template_name:string,directory:string,title:string,values:object) {
 		const template = await this.loadTemplate(template_name);
 		const result = Mustache.render(template,values);
-		this.app.vault.create(directory + "/" + title + ".md", result)
+		const filename =directory + "/" + title + ".md" 
+		try {
+			this.app.vault.create(directory + "/" + title + ".md", result)
+		} catch (error) {
+			alert("Couldn't create file: \n" + error.toString() )
+		}
 	}
 
 	// Reads in the template file, strips out the templating ID tags from the YAML and returns the result
 	async loadTemplate(name:string): Promise<string> {
-		const filename = this.templateDir + "/" + name + ".md"
+		const filename = this.settings.templateDirectory + "/" + name + ".md"
 		const file = this.app.vault.getAbstractFileByPath(filename);
 		if (!(file instanceof TFile)) {
-			console.log("File was not a file! " + file.path)
+			alert("Couldn't find file: " + file.path)
 			return
 		}
 		const rawTemplate = await this.app.vault.read(file)
@@ -109,6 +111,7 @@ export default class FromTemplatePlugin extends Plugin {
 			"template-id",
 			"template-name",
 			"template-replacement",
+			"template-input",
 			"template-output"
 		]
 		templateFields.forEach(tf => {
@@ -145,26 +148,15 @@ class FillTemplate extends Modal {
 	async onOpen() {
 		let {contentEl} = this;
 
-		
-
 		// Load the template based on the name given
 		let template = await this.plugin.loadTemplate(this.spec.name)
-		console.log("Got template: \n"+template)
 		// Pull out the tags the Mustache finds
 		const result: Array<Array<any>> = Mustache.parse(template);
-		console.log("Tags: ", result)
 
 		//Create the top of the interface - header and input for Title of the new note
 		contentEl.createEl('h2', { text: "Create from Template: " + this.spec.name });
 		contentEl.createEl('h4', { text: "Destination: " + this.spec.directory });
 		const form = contentEl.createEl('div');
-		/*
-		const titleEl = contentEl.createEl('div');
-		titleEl.createEl('span',{text:"Title: "});
-		const titleInput = titleEl.createEl('input');
-		titleInput.value = this.editor.getSelection()
-		titleInput.style.cssText = 'float: right;';
-		*/
 
 		const controls:Record<string,() => string> = {};
 
@@ -176,14 +168,6 @@ class FillTemplate extends Modal {
 		result.forEach( r => {
 			if( r[0] === "name" && r[1] != "title") {
 				this.createInput(contentEl,controls,r[1])
-				/*
-				const id:string = r[1]
-				const controlEl = contentEl.createEl('div');
-				controlEl.createEl("span", {text: id})
-				const input = controlEl.createEl('input');
-				input.style.cssText = 'float: right;';
-				controls[id] = input
-				*/
 			}
 		})
 
@@ -200,8 +184,6 @@ class FillTemplate extends Modal {
 			}
 			if( this.plugin.settings.replaceSelection && (this.spec.replacement !== "none") ) {
 				const replaceText = Mustache.render(this.spec.replacement,data)
-				console.log("Replacement text: " + replaceText)
-				console.log("Data: ",data)
 				this.editor.replaceRange(replaceText,this.editor.getCursor("from"), this.editor.getCursor("to"));
 			}
 			this.plugin.createNote(this.spec.name,this.spec.directory,data['title'],data);
@@ -215,7 +197,7 @@ class FillTemplate extends Modal {
 	 * - creates a div with a title for the control
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
-	createInput(parent:HTMLElement, controls:Record<string,() => string>, field:string, fieldType:string=null, initial:string=null){
+	createInput(parent:HTMLElement, controls:Record<string,() => string>, field:string, fieldType:string=null, initial:string=""){
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
 		const parts = field.split(":");
 		const id = parts[0] || field;
@@ -227,7 +209,6 @@ class FillTemplate extends Modal {
 		label.htmlFor = id
 		var inputField:HTMLElement;
 		var valueFunc:()=>string = () => ""
-		console.log("Adding " + id + " of type " + inputType)
 		//controls[id] = input
 		switch(inputType) {
 			case "area": {
@@ -235,12 +216,8 @@ class FillTemplate extends Modal {
 				i.id = id
 				i.rows = 5;
 				i.cols = 50;
-				// Doesn't seem to be working :(
-				i.value = initial || id;
-				i.defaultValue = id;
-				valueFunc = () => {
-					return i.value;
-				}
+				i.value = initial;
+				valueFunc = () => { return i.value; }
 				inputField = i;
 				break;
 			}
