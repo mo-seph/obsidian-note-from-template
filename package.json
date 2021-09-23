@@ -1,7 +1,7 @@
 {
-  "name": "obsidian-sample-plugin",
-  "version": "0.12.0",
-  "description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+  "name": "obsidian-notes-from-template",
+  "version": "0.1.1",
+	"description": "Create new notes from Templates - for each Template, provides a Command to trigger it, and a form to fill in any variables in the template",
   "main": "main.js",
   "scripts": {
     "dev": "rollup --config rollup.config.js -w",
