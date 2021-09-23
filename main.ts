@@ -18,12 +18,14 @@ Mustache.escape = function(text:string) {return text;};
 interface MyPluginSettings {
 	templateDirectory: string;
 	replaceSelection: boolean;
+	inputSplit: string;
 	config: string;
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	templateDirectory: 'templates',
 	replaceSelection: true,
+	inputSplit: "-",
 	config: '[]'
 }
 
@@ -32,6 +34,7 @@ interface TemplateSpec {
 	name: string; //Name to show for the command (probably same as the template filename, but doesn't have to be)
 	template: string; //Name of the template file
 	directory: string; //Output directory for notes generated from the template
+	input: string; //Fields to pull out of the input
 	replacement: string; //A template string for the text that will be inserted in the editor
 }
 
@@ -77,6 +80,7 @@ export default class FromTemplatePlugin extends Plugin {
 					name:result.metadata['template-name'] || fn,
 					template:fn,
 					directory:result.metadata['template-output'] || "test",
+					input:result.metadata['template-input'] || "title,body",
 					replacement:result.metadata['template-replacement'] || "[[{{title}}]]",
 				}
 				return tmpl
@@ -150,24 +154,29 @@ class FillTemplate extends Modal {
 
 		// Load the template based on the name given
 		let template = await this.plugin.loadTemplate(this.spec.name)
-		// Pull out the tags the Mustache finds
-		const result: Array<Array<any>> = Mustache.parse(template);
 
 		//Create the top of the interface - header and input for Title of the new note
 		contentEl.createEl('h2', { text: "Create from Template: " + this.spec.name });
 		contentEl.createEl('h4', { text: "Destination: " + this.spec.directory });
 		const form = contentEl.createEl('div');
 
+		// Parse the input to fill out tags in the template
 		const controls:Record<string,() => string> = {};
+		const input = this.editor.getSelection()
+		const input_fields = this.parseInput(input)
+		const title = (input_fields['title'] || "").replace(/[^a-zA-Z0-9 -:]/g,"") //Quick and dirty regex for usable titles
 
-		this.createInput(form,controls,"title","text",this.editor.getSelection()
-			.replace(/[^a-zA-Z0-9 -:]/g,"")) //Quick and dirty regex for good titles
+		this.createInput(form,controls,"title","text",title)
+
+		// Pull out the tags the Mustache finds
+		const result: Array<Array<any>> = Mustache.parse(template);
 
 		//Now go through and make an input for each field in the template
 		//const controls:Record<string,HTMLInputElement> = {"title":titleInput}
 		result.forEach( r => {
 			if( r[0] === "name" && r[1] != "title") {
-				this.createInput(contentEl,controls,r[1])
+				const [id,typ] = this.parseField(r[1])
+				this.createInput(contentEl,controls,id,typ,input_fields[id],r[1])
 			}
 		})
 
@@ -192,24 +201,35 @@ class FillTemplate extends Modal {
 
 	}
 
+	parseInput(input:string) : Record<string,string> {
+		const fields = this.spec.input.split(",").map(s => s.trim())
+		const input_parts = input.split(new RegExp(this.plugin.settings.inputSplit)).map(s=>s.trim())
+		const zip = (a:string[], b:string[]) => Array.from(Array(Math.min(b.length, a.length)), (_, i) => [a[i], b[i]]);
+		const r : Record<string,string> = {}
+		zip(fields,input_parts).forEach(f => r[f[0]] = f[1])
+		return r
+	}
+
+	parseField(input:string) : [string,string] {
+		const parts = input.split(":");
+		const id = parts[0] || input;
+		const inputType = parts[1] || (id === "body" ? "area" : "text" );
+		return [id,inputType]
+	}
+
 	/*
 	 * Creates the UI element for putting in the text. Takes a parent HTMLElement, and:
 	 * - creates a div with a title for the control
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
-	createInput(parent:HTMLElement, controls:Record<string,() => string>, field:string, fieldType:string=null, initial:string=""){
+	createInput(parent:HTMLElement, controls:Record<string,() => string>, id:string, inputType:string=null, initial:string="", template_id:string=null){
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
-		const parts = field.split(":");
-		const id = parts[0] || field;
-		const inputType = fieldType || parts[1] || (id === "body" ? "area" : "text" );
-		//const inputType:string = "text"
 
 		const labelText = id[0].toUpperCase() + id.substring(1) + ": ";
 		const label = controlEl.createEl("label", {text: labelText, cls:"from-template-label"})
 		label.htmlFor = id
 		var inputField:HTMLElement;
 		var valueFunc:()=>string = () => ""
-		//controls[id] = input
 		switch(inputType) {
 			case "area": {
 				const i = controlEl.createEl('textarea', {cls:"from-template-control"});
@@ -234,7 +254,7 @@ class FillTemplate extends Modal {
 		if(inputField) {
 			//inputField.style.cssText = 'float: right;';
 		}
-		controls[field] = valueFunc
+		controls[template_id || id] = valueFunc
 	}
 
 	onClose() {
@@ -276,6 +296,15 @@ class FromTemplateSettingTab extends PluginSettingTab {
 				.setValue(true)
 				.onChange(async (value) => {
 					this.plugin.settings.replaceSelection = value;
+					await this.plugin.saveSettings();
+				}));
+		new Setting(containerEl)
+			.setName('Selection split')
+			.setDesc('A regex to split up the input selection to fill in extra fields in the note creation box')
+			.addText(text => text
+				.setValue("-")
+				.onChange(async (value) => {
+					this.plugin.settings.inputSplit = value;
 					await this.plugin.saveSettings();
 				}));
 
