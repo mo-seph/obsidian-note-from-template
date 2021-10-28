@@ -25,7 +25,7 @@ interface MyPluginSettings {
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	templateDirectory: 'templates',
 	replaceSelection: true,
-	inputSplit: "-",
+	inputSplit: "\\s+-\\s+",
 	config: '[]'
 }
 
@@ -173,10 +173,14 @@ class FillTemplate extends Modal {
 
 		//Now go through and make an input for each field in the template
 		//const controls:Record<string,HTMLInputElement> = {"title":titleInput}
+		const fields : { [name: string]: number } = {"title":1} //Assume we already have a title field
 		result.forEach( r => {
-			if( r[0] === "name" && r[1] != "title") {
+			if( r[0] === "name" ) {
 				const [id,typ] = this.parseField(r[1])
-				this.createInput(contentEl,controls,id,typ,input_fields[id],r[1])
+				if( ! fields[id] ) {
+					fields[id] = 1
+					this.createInput(contentEl,controls,id,typ,input_fields[id],r[1])
+				}
 			}
 		})
 
