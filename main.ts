@@ -15,14 +15,14 @@ Mustache.escape = function(text:string) {return text;};
  * - add a replacement string for what goes back into the text
  */
 
-interface MyPluginSettings {
+interface FromTemplatePluginSettings {
 	templateDirectory: string;
 	replaceSelection: boolean;
 	inputSplit: string;
 	config: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
+const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
 	templateDirectory: 'templates',
 	replaceSelection: true,
 	inputSplit: "\\s+-\\s+",
@@ -40,7 +40,7 @@ interface TemplateSpec {
 
 
 export default class FromTemplatePlugin extends Plugin {
-	settings: MyPluginSettings;
+	settings: FromTemplatePluginSettings;
 	//templateDir: string = "templates"
 
 	async onload() {
