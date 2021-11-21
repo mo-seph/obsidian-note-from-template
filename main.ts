@@ -69,6 +69,7 @@ export default class FromTemplatePlugin extends Plugin {
 
 	// Run through the settings directory and return an TemplateSettings for each valid file there
 	async getTemplates() {
+		console.log("Template settings folder: " + this.settings.templateDirectory)
 		const templateFolder:TFolder = this.app.vault.getAbstractFileByPath(this.settings.templateDirectory) as TFolder
 		const templates = templateFolder.children.map( async c => {
 			if( c instanceof TFile ) {
@@ -288,7 +289,7 @@ class FromTemplateSettingTab extends PluginSettingTab {
 			.setDesc('Directory to read templates from')
 			.addText(text => text
 				.setPlaceholder('templates')
-				.setValue('')
+				.setValue(this.plugin.settings.templateDirectory)
 				.onChange(async (value) => {
 					this.plugin.settings.templateDirectory = value;
 					await this.plugin.saveSettings();
@@ -297,7 +298,7 @@ class FromTemplateSettingTab extends PluginSettingTab {
 			.setName('Replace selection')
 			.setDesc('Should the current editor selection be replaced with a link to the title of the new Note?')
 			.addToggle(toggle => toggle
-				.setValue(true)
+				.setValue(this.plugin.settings.replaceSelection)
 				.onChange(async (value) => {
 					this.plugin.settings.replaceSelection = value;
 					await this.plugin.saveSettings();
@@ -306,7 +307,7 @@ class FromTemplateSettingTab extends PluginSettingTab {
 			.setName('Selection split')
 			.setDesc('A regex to split up the input selection to fill in extra fields in the note creation box')
 			.addText(text => text
-				.setValue("-")
+				.setValue(this.plugin.settings.inputSplit)
 				.onChange(async (value) => {
 					this.plugin.settings.inputSplit = value;
 					await this.plugin.saveSettings();
