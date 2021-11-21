@@ -4,7 +4,7 @@ import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import metadataParser from 'markdown-yaml-metadata-parser'
 import { tmpdir } from 'os';
-import { strictEqual } from 'assert';
+import { notDeepStrictEqual, strictEqual } from 'assert';
 
 // Stop mustache from escaping HTML entities as we are generating Markdown
 Mustache.escape = function(text:string) {return text;};
@@ -71,6 +71,7 @@ export default class FromTemplatePlugin extends Plugin {
 	async getTemplates() {
 		console.log("Template settings folder: " + this.settings.templateDirectory)
 		const templateFolder:TFolder = this.app.vault.getAbstractFileByPath(this.settings.templateDirectory) as TFolder
+		if( ! templateFolder ) return []
 		const templates = templateFolder.children.map( async c => {
 			if( c instanceof TFile ) {
 				const data = await this.app.vault.read(c)
@@ -277,6 +278,17 @@ class FromTemplateSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	getDirectoryText(folder:string) : [string,string,string] {
+		console.log("Checking settings folder: " + folder)
+		const templateFolder:TFolder = this.app.vault.getAbstractFileByPath(folder) as TFolder
+		if( ! templateFolder ) {
+			return [`⚠️ Directory to read templates from. '${folder}' does not exist`,'from-template-error-text','from-template-ok-text']
+		}
+		else {
+			return [`✅ Directory to read templates from. '${folder}' has ${templateFolder.children.length} templates`,'from-template-ok-text','from-template-error-text']
+		}
+	}
+
 	display(): void {
 		let {containerEl} = this;
 
@@ -284,16 +296,29 @@ class FromTemplateSettingTab extends PluginSettingTab {
 
 		containerEl.createEl('h2', {text: 'Note From Template Settings'});
 
-		new Setting(containerEl)
+		const dirSetting = new Setting(containerEl)
 			.setName('Template Directory')
 			.setDesc('Directory to read templates from')
-			.addText(text => text
+
+		const updateFolderDescription = (folder:string) => {
+			try {
+			let [text,clss,r_clss] = this.getDirectoryText(folder)
+			dirSetting.setDesc(text)
+			dirSetting.descEl.addClass(clss)
+			dirSetting.descEl.removeClass(r_clss)
+			} catch (error) {
+
+			}
+		}
+		dirSetting.addText(text => text
 				.setPlaceholder('templates')
 				.setValue(this.plugin.settings.templateDirectory)
 				.onChange(async (value) => {
 					this.plugin.settings.templateDirectory = value;
+					updateFolderDescription(value)
 					await this.plugin.saveSettings();
 				}));
+		updateFolderDescription(this.plugin.settings.templateDirectory)
 		new Setting(containerEl)
 			.setName('Replace selection')
 			.setDesc('Should the current editor selection be replaced with a link to the title of the new Note?')

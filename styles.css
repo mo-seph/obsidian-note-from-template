@@ -22,3 +22,10 @@
     padding: 6pt;
     text-align:right;
 }
+
+.from-template-error-text {
+    color: #f00
+}
+.from-template-ok-text {
+    color: #afa
+}
