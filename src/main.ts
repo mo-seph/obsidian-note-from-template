@@ -112,19 +112,17 @@ export default class FromTemplatePlugin extends Plugin {
 	}
 
 	async templateFilled(spec:ReplacementSpec) {
+		const template = await this.loadTemplate(spec.template.name);
+		const result = Mustache.render(template,spec.data);
+
 		if( this.settings.replaceSelection && (spec.template.replacement !== "none") ) {
 			const replaceText = Mustache.render(spec.template.replacement,spec.data)
 			spec.editor.replaceRange(replaceText,spec.editor.getCursor("from"), spec.editor.getCursor("to"));
 		}
-		this.createNote(spec.template.name,spec.template.directory,spec.data['title'],spec.data);
-	}
-
-	async createNote(template_name:string,directory:string,title:string,values:object) {
-		const template = await this.loadTemplate(template_name);
-		const result = Mustache.render(template,values);
-		const filename =directory + "/" + title + ".md" 
+		//this.createNote(spec.template.name,spec.template.directory,spec.data['title'],spec.data);
+		const filename =spec.template.directory + "/" + spec.data['title'] + ".md" 
 		try {
-			this.app.vault.create(directory + "/" + title + ".md", result)
+			this.app.vault.create(spec.template.directory + "/" + spec.data['title'] + ".md", result)
 		} catch (error) {
 			alert("Couldn't create file: \n" + error.toString() )
 		}
