@@ -7,7 +7,7 @@ import { tmpdir } from 'os';
 import { notDeepStrictEqual, strictEqual } from 'assert';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin, { ReplacementOptions}  from './main';
-import { ReplacementSpec } from './templates';
+import { CreateType, ReplacementSpec } from './templates';
 
 export class FillTemplate extends Modal {
 	plugin:FromTemplatePlugin
@@ -42,38 +42,48 @@ export class FillTemplate extends Modal {
          * For now, just using the settings value that is passed in
         */ 
         const willReplace = () => {
-            return this.options.shouldReplaceSelection
+            if( this.options.shouldReplaceSelection === "always" ) return true;
+            if( this.options.shouldReplaceSelection === "sometimes" && this.result.input.length > 0 ) return true;
+            return false;
         }
         this.options.willReplaceSelection = willReplace()
-        new Setting(contentEl)
-        .setName('Replace selection')
-        .setDesc('Should the current editor selection be replaced with a template text')
-        .addToggle(toggle => toggle
-            .setValue(this.options.shouldReplaceSelection)
-            .onChange(async (value) => {
-                this.options.willReplaceSelection = value;
-            }));
 
+        const fieldNames = this.result.settings.fields.map(f => f.id)
+        fieldNames.push("templateResult")
+     
         let replacementText: TextComponent;
         new Setting(contentEl)
         .setName("Replacement String")
-        .setDesc(("String to replace selection with. Template fields: "))
+        //.setDesc(("String to replace selection with. Template fields: "+))
+        //.setDesc(("String to replace selection with."))
+        .addToggle(toggle => toggle
+            .setValue(willReplace())
+            .onChange(async (value) => {
+                this.options.willReplaceSelection = value;
+                replacementText.setDisabled(!value)
+            }))
         .addText((text) => {
             replacementText = text;
             text.setValue(this.result.settings.textReplacementTemplate)
                 .onChange((value) => {
                     this.result.settings.textReplacementTemplate = value
-                });
-        }).addToggle(toggle => toggle);
-
+                })
+                .setDisabled(!willReplace());
+        })
+        const label = contentEl.createEl("div", {text: "Available fields: " + fieldNames.join(", "), cls:"setting-item-description"})
         new Setting(contentEl)
         .setName("Create and open note")
         .setDesc(("Should the note be created / opened?"))
         .addDropdown((dropdown) => {
-            dropdown.addOption("none","Don't create")
-            dropdown.addOption("create","Create don't open")
-            dropdown.addOption("open","Create and open")
-            dropdown.addOption("open_new","Create and open in new pane")
+            dropdown
+            .addOption("none","Don't create")
+            .addOption("create","Create, but don't open")
+            .addOption("open","Create and open")
+            .addOption("open-pane","Create and open in new pane")
+            .setValue(this.options.shouldCreateOpen)
+            .onChange((value) => {
+                this.options.shouldCreateOpen = value as CreateType
+            });
         });            
 	
 		//And a submit button
@@ -83,8 +93,6 @@ export class FillTemplate extends Modal {
 
 		//On submit, get the data out of the form, pass through to main plugin for processing
 		submitButton.addEventListener('click', () => {
-            console.log(this.result.data)
-            console.log(this.result)
             this.plugin.templateFilled(this.result,this.options)
 			this.close()
 		});
@@ -107,10 +115,6 @@ export class FillTemplate extends Modal {
 		const label = controlEl.createEl("label", {text: labelText, cls:"from-template-label"})
 		label.htmlFor = id
          
-        console.log("Creating field ",id)
-        console.log("Data: ",data[id])
-        console.log("Initial: ",initial)
-
         //Put the data into the record to start
         if( initial) data[id] = initial;
 

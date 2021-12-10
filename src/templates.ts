@@ -3,6 +3,7 @@ import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import metadataParser from 'markdown-yaml-metadata-parser'
 import { TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
+import { defaultMaxListeners } from 'events';
 
 
 /*
@@ -25,6 +26,16 @@ export interface TemplateSettings {
 	textReplacementTemplate: string; //A template string for the text that will be inserted in the editor
     templateBody:string;
 	fields:TemplateField[]; //Specifications for all of the fields in the template
+    shouldReplaceInput: ReplaceType
+    shouldCreateOpen: CreateType;
+}
+
+export interface TemplateDefaults {
+	replaceSelection: ReplaceType
+	createOpen: CreateType
+    outputDirectory:string
+    inputFieldList:string
+    textReplacementTemplate:string
 }
 
 export interface TemplateField {
@@ -36,11 +47,15 @@ export interface TemplateField {
 
 
 export interface ReplacementSpec {
-	//input:string; // The currently selected text in the editor
+	input:string; // The currently selected text in the editor
 	templateID:TemplateIdentifier; //Keep hold of the template ID just in case
     settings:TemplateSettings; //All the settings of the template
 	data:Record<string,string>; //The data to fill in the template with
 }
+
+
+export type ReplaceType = "always" | "sometimes" | "never"
+export type CreateType = "none" | "create" | "open" | "open-pane"
 
 
 export default class TemplateHelper {
@@ -55,15 +70,15 @@ export default class TemplateHelper {
     - a filled out version of the currently selected text in the editor
     */
     async fillOutTemplate(spec:ReplacementSpec) : Promise<[string,string]> {
-		const data = spec.data
 
 		//Copy data across to all the alternative formulations of a field
 		spec.settings.fields.forEach( f => {
-			f.alternatives.forEach( a => data[a] = data[f.id])
+			f.alternatives.forEach( a => spec.data[a] = spec.data[f.id])
 		})
 		
 		//const template = await this.loadTemplate(spec.template);
 		const filledTemplate = Mustache.render(spec.settings.templateBody,spec.data);
+        spec.data['templateResult'] = metadataParser(filledTemplate).content
         const replaceText = Mustache.render(spec.settings.textReplacementTemplate,spec.data)
         return [filledTemplate,replaceText]
     }
@@ -74,10 +89,11 @@ export default class TemplateHelper {
      * - input text
      * - a delimiter to turn the input text into field values
      */
-    async prepareTemplate(ts:TemplateIdentifier,input:string,delimiter:string="\\s+-\\s+") : Promise<ReplacementSpec> {
-		const templateSettings = await this.getTemplateSettings(ts)
+    async prepareTemplate(ts:TemplateIdentifier,defaults:TemplateDefaults,input:string,delimiter:string="\\s+-\\s+") : Promise<ReplacementSpec> {
+		const templateSettings = await this.getTemplateSettings(ts,defaults)
 		const fieldData = this.parseInput(input,templateSettings.inputFieldList,delimiter)
         return {
+            input:input,
 			templateID:ts,
 			settings:templateSettings,
 			data:fieldData,
@@ -89,7 +105,7 @@ export default class TemplateHelper {
      * Returns all the templates in a directory
      * Run through the settings directory and return an TemplateSettings for each valid file there
      */
-	async getTemplates(directory:string)  {
+	async getTemplates(directory:string) : Promise<TemplateIdentifier[]>  {
 		const templateFolder:TFolder = this.vault.getAbstractFileByPath(directory) as TFolder
 		if( ! templateFolder ) return Promise.all([])
         const children = templateFolder.children
@@ -100,6 +116,8 @@ export default class TemplateHelper {
 	}
 
     async getTemplateIdentifier(c:TFile) {
+        try {
+
         const metadata = await this.readMetadata(c.path)
         const fn = c.basename
         const tmpl:TemplateIdentifier = {
@@ -108,6 +126,9 @@ export default class TemplateHelper {
             path:c.path,
         }
         return tmpl
+        } catch( error ) {
+            console.log("Couldn't read template: " + c.path, error )
+        }
     }
 
     /*
@@ -119,7 +140,7 @@ export default class TemplateHelper {
     }
     */
 
-    async getTemplateSettings(ts:TemplateIdentifier):Promise<TemplateSettings> {
+    async getTemplateSettings(ts:TemplateIdentifier,defaults:TemplateDefaults):Promise<TemplateSettings> {
         const c = this.vault.getAbstractFileByPath(ts.path) as TFile
         if( c instanceof TFile ) {
             const data = await this.vault.read(c)
@@ -127,9 +148,11 @@ export default class TemplateHelper {
             const fn = c.basename
             const body = await this.getTemplateBody(ts)
             const tmpl:TemplateSettings = {
-                outputDirectory:metadata['template-output'] || "test",
-                inputFieldList:metadata['template-input'] || "title,body",
-                textReplacementTemplate:metadata['template-replacement'] || "[[{{title}}]]",
+                outputDirectory:metadata['template-output'] || defaults.outputDirectory,
+                inputFieldList:metadata['template-input'] || defaults.inputFieldList,
+                textReplacementTemplate:metadata['template-replacement'] || defaults.textReplacementTemplate,
+                shouldReplaceInput:metadata['template-should-replace'] || defaults.replaceSelection,
+                shouldCreateOpen:metadata['template-should-create'] || defaults.createOpen,
                 templateBody : body,
                 fields : this.getTemplateFields(body)
             }
@@ -151,7 +174,9 @@ export default class TemplateHelper {
             "template-name",
             "template-replacement",
             "template-input",
-            "template-output"
+            "template-output",
+            "template-should-replace",
+            "template-should-create"
         ]
         templateFields.forEach(tf => {
             const re = new RegExp(tf + ".*\n")
