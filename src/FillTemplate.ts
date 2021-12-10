@@ -1,4 +1,4 @@
-import { App, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting, TextComponent, TFile, TFolder } from 'obsidian';
+import { App, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent, TextComponent, TFile, TFolder } from 'obsidian';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
@@ -10,9 +10,7 @@ import FromTemplatePlugin, { ReplacementSpec, TemplateSpec } from './main';
 
 export class FillTemplate extends Modal {
 	plugin:FromTemplatePlugin
-	spec:TemplateSpec
 	result:ReplacementSpec
-	input:string
 	constructor(app: App,plugin:FromTemplatePlugin,spec:ReplacementSpec ) {
 		super(app);
         this.result = spec
@@ -23,126 +21,120 @@ export class FillTemplate extends Modal {
 		let {contentEl} = this;
 
 		// Load the template based on the name given
-		let template = await this.plugin.loadTemplate(this.spec.name)
+		//let template = await this.plugin.loadTemplate(this.result.template.name)
 
 		//Create the top of the interface - header and input for Title of the new note
-		contentEl.createEl('h2', { text: "Create from Template: " + this.spec.name });
-		contentEl.createEl('h4', { text: "Destination: " + this.spec.directory });
+		contentEl.createEl('h2', { text: "Create from Template: " + this.result.template.name });
+		contentEl.createEl('h4', { text: "Destination: " + this.result.template.directory });
 		const form = contentEl.createEl('div');
 
-		// Parse the input to fill out tags in the template
-		const controls:Record<string,() => string> = {};
-		const input_fields = this.parseInput(this.input)
-		const title = (input_fields['title'] || "").replace(/[^a-zA-Z0-9 -:]/g,"") //Quick and dirty regex for usable titles
+        //Create each of the fields
+        this.result.fields.forEach( f => {
+            this.createInput(contentEl,this.result.data,f.id,f.inputType)
+        })
 
-		this.createInput(form,controls,"title","text",title)
+        // And the extra controls at the bottom
 
-		// Pull out the tags the Mustache finds
-		const result: Array<Array<any>> = Mustache.parse(template);
+        /* Should text be replaced? It's a combination of:
+         * - if it is turned on in the plugin. Will be yes/no/if selection
+         * - if that is overriden in the template - same values
+         * - is there text selected
+         * For now, just using the settings value that is passed in
+        */ 
+        const willReplace = () => {
+            return this.result.shouldReplaceSelection
+        }
+        this.result.willReplaceSelection = willReplace()
+        new Setting(contentEl)
+        .setName('Replace selection')
+        .setDesc('Should the current editor selection be replaced with a template text')
+        .addToggle(toggle => toggle
+            .setValue(this.result.shouldReplaceSelection)
+            .onChange(async (value) => {
+                this.result.willReplaceSelection = value;
+            }));
 
-		//Now go through and make an input for each field in the template
-		//const controls:Record<string,HTMLInputElement> = {"title":titleInput}
-		const fields : { [name: string]: number } = {"title":1} //Assume we already have a title field
-		result.forEach( r => {
-			if( r[0] === "name" ) {
-				const [id,typ] = this.parseField(r[1])
-				if( ! fields[id] ) {
-					fields[id] = 1
-					this.createInput(contentEl,controls,id,typ,input_fields[id],r[1])
-				}
-			}
-		})
+        let replacementText: TextComponent;
+        new Setting(contentEl)
+        .setName("Replacement String")
+        .setDesc(("String to replace selection with. Template fields: "))
+        .addText((text) => {
+            replacementText = text;
+            text.setValue(this.result.replacementText)
+                .onChange((value) => {
+                    this.result.replacementText = value
+                });
+        }).addToggle(toggle => toggle);
 
-		let nameText: TextComponent;
-		new Setting(contentEl)
-		.setName("Test")
-		.setDesc(("Testing stuff?"))
-		.addText((text) => {
-			nameText = text;
-			text.setValue("Hi")
-				.onChange((value) => {
-					console.log("New text: "+value)
-					this.setValidationError(nameText, "invalid_name");
-				});
-		});
+        new Setting(contentEl)
+        .setName("Create and open note")
+        .setDesc(("Should the note be created / opened?"))
+        .addDropdown((dropdown) => {
+            dropdown.addOption("none","Don't create")
+            dropdown.addOption("create","Create don't open")
+            dropdown.addOption("open","Create and open")
+            dropdown.addOption("open_new","Create and open in new pane")
+        });            
 	
 		//And a submit button
 		const submit = contentEl.createDiv({cls:"from-template-section"})
 		const submitButton = submit.createEl('button', { text: "Add", cls:"from-template-submit" });
 		//submitButton.style.cssText = 'align: right;';
-		//On submit, get the data out of the form, replace the selection in the editor with a link to the current Title, and create the note
+
+		//On submit, get the data out of the form, pass through to main plugin for processing
 		submitButton.addEventListener('click', () => {
-			const data:Record<string,string> = {}
-			for( const k in controls ) {
-				data[k] = controls[k]()
-			}
+            console.log(this.result.data)
+            console.log(this.result)
             this.plugin.templateFilled(this.result)
-            /*
-			if( this.plugin.settings.replaceSelection && (this.spec.replacement !== "none") ) {
-				const replaceText = Mustache.render(this.spec.replacement,data)
-				this.editor.replaceRange(replaceText,this.editor.getCursor("from"), this.editor.getCursor("to"));
-			}
-			this.plugin.createNote(this.spec.name,this.spec.directory,data['title'],data);
-            */
 			this.close()
 		});
 
 	}
 
-	parseInput(input:string) : Record<string,string> {
-		const fields = this.spec.input.split(",").map(s => s.trim())
-		const input_parts = input.split(new RegExp(this.plugin.settings.inputSplit)).map(s=>s.trim())
-		const zip = (a:string[], b:string[]) => Array.from(Array(Math.min(b.length, a.length)), (_, i) => [a[i], b[i]]);
-		const r : Record<string,string> = {}
-		zip(fields,input_parts).forEach(f => r[f[0]] = f[1])
-		return r
-	}
 
-	parseField(input:string) : [string,string] {
-		const parts = input.split(":");
-		const id = parts[0] || input;
-		const inputType = parts[1] || (id === "body" ? "area" : "text" );
-		return [id,inputType]
-	}
+
+
 
 	/*
 	 * Creates the UI element for putting in the text. Takes a parent HTMLElement, and:
 	 * - creates a div with a title for the control
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
-	createInput(parent:HTMLElement, controls:Record<string,() => string>, id:string, inputType:string=null, initial:string="", template_id:string=null){
+	createInput(parent:HTMLElement, data:Record<string,string>, id:string, inputType:string=null, initial:string=""){
+        // Create div and label
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
-
 		const labelText = id[0].toUpperCase() + id.substring(1) + ": ";
 		const label = controlEl.createEl("label", {text: labelText, cls:"from-template-label"})
 		label.htmlFor = id
-		var inputField:HTMLElement;
-		var valueFunc:()=>string = () => ""
+         
+        console.log("Creating field ",id)
+        console.log("Data: ",data[id])
+        console.log("Initial: ",initial)
+
+        //Put the data into the record to start
+        if( initial) data[id] = initial;
+
+
+        //Create the control
 		switch(inputType) {
 			case "area": {
-				const i = controlEl.createEl('textarea', {cls:"from-template-control"});
-				i.id = id
-				i.rows = 5;
-				i.cols = 50;
-				i.value = initial;
-				valueFunc = () => { return i.value; }
-				inputField = i;
+                const t = new TextAreaComponent(controlEl)
+                    .setValue(data[id])
+                    .onChange((value) => data[id] = value)
+				t.inputEl.rows = 5;
+				t.inputEl.cols = 50;
+                t.inputEl.addClass("from-template-control")
 				break;
 			}
 			case "text": {
-				const i = controlEl.createEl('input', {cls:"from-template-control"});
-				i.id = id
-				i.size = 50
-				i.value = initial;
-				valueFunc = () => i.value
-				inputField = i;
+                const t = new TextComponent(controlEl)
+                    .setValue(data[id])
+                    .onChange((value) => data[id] = value)
+                t.inputEl.addClass("from-template-control")
+				t.inputEl.size = 50
 				break;
 			}
 		}
-		if(inputField) {
-			//inputField.style.cssText = 'float: right;';
-		}
-		controls[template_id || id] = valueFunc
 	}
 
 	onClose() {
