@@ -23,16 +23,13 @@ export class FillTemplate extends Modal {
 	async onOpen() {
 		let {contentEl} = this;
 
-		// Load the template based on the name given
-		//let template = await this.plugin.loadTemplate(this.result.template.name)
-
 		//Create the top of the interface - header and input for Title of the new note
-		contentEl.createEl('h2', { text: "Create from Template: " + this.result.template.name });
-		contentEl.createEl('h4', { text: "Destination: " + this.result.templateSettings.outputDirectory });
+		contentEl.createEl('h2', { text: "Create from Template: " + this.result.templateID.name });
+		contentEl.createEl('h4', { text: "Destination: " + this.result.settings.outputDirectory });
 		const form = contentEl.createEl('div');
 
         //Create each of the fields
-        this.result.templateSettings.fields.forEach( f => {
+        this.result.settings.fields.forEach( f => {
             this.createInput(contentEl,this.result.data,f.id,f.inputType)
         })
 
@@ -63,9 +60,9 @@ export class FillTemplate extends Modal {
         .setDesc(("String to replace selection with. Template fields: "))
         .addText((text) => {
             replacementText = text;
-            text.setValue(this.result.templateSettings.textReplacementTemplate)
+            text.setValue(this.result.settings.textReplacementTemplate)
                 .onChange((value) => {
-                    this.result.templateSettings.textReplacementTemplate = value
+                    this.result.settings.textReplacementTemplate = value
                 });
         }).addToggle(toggle => toggle);
 

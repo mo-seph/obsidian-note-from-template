@@ -5,7 +5,7 @@ import * as Mustache from 'mustache';
 import metadataParser from 'markdown-yaml-metadata-parser'
 import { BaseModal } from './BaseModal';
 import { FillTemplate } from './FillTemplate';
-import TemplateHelper, { ReplacementSpec, TemplateSpec } from './templates';
+import TemplateHelper, { ReplacementSpec, TemplateIdentifier } from './templates';
 
 // Stop mustache from escaping HTML entities as we are generating Markdown
 Mustache.escape = function(text:string) {return text;};
@@ -53,10 +53,10 @@ export default class FromTemplatePlugin extends Plugin {
 
 	// Adds all the template commands - calls getTemplates which looks for files in the settings.templateDirectory
 	async addTemplates() {
-		const templates = await this.templates.getTemplates(this.settings.templateDirectory)
+		const templates = await this.templates.getTemplates(this.settings.templateDirectory) || []
 		console.log("Got templates! ",templates)
 		templates.forEach(async t => {
-			const ts = (await t) as TemplateSpec
+			const ts = (await t) as TemplateIdentifier
 			this.addCommand( {
 				id:ts.id,
 				name: ts.name,
@@ -66,23 +66,11 @@ export default class FromTemplatePlugin extends Plugin {
 		})
 	}
 
-	async launchTemplate(editor:Editor,ts:TemplateSpec) {
+	async launchTemplate(editor:Editor,ts:TemplateIdentifier) {
 		// Get the template text and the fields to fill in
-		//const templateText = await this.templates.loadTemplate(ts.name,this.settings.templateDirectory)
-		//const tempFields = this.templates.templateFields(templateText)
-		const templateSettings = await this.templates.getTemplateSettings(ts)
-		// Get the input from the editor
-		const input = editor.getSelection()
-		// ... and populate the field data with it
-		const fieldData = this.templates.parseInput(input,templateSettings.inputFieldList,this.settings.inputSplit)
-		//This class does all the UI work
-		const replacement = {
-			input:input,
-			template:ts,
-			templateSettings:templateSettings,
-			data:fieldData,
-			//replacementText:ts.textReplacementTemplate
-		}
+		const template = await this.templates.prepareTemplate(
+			ts,editor.getSelection(),this.settings.inputSplit)
+
 		const options:ReplacementOptions = {
 			editor:editor,
 			createNote:true,
@@ -90,19 +78,20 @@ export default class FromTemplatePlugin extends Plugin {
 			shouldReplaceSelection:this.settings.replaceSelection,
 			willReplaceSelection:this.settings.replaceSelection,
 		}
-		new FillTemplate(this.app,this,replacement,options).open();
+		//This class does all the UI work
+		new FillTemplate(this.app,this,template,options).open();
 	}
 
 
 	async templateFilled(spec:ReplacementSpec,options:ReplacementOptions) {
 		let [filledTemplate,replaceText] = await this.templates.fillOutTemplate(spec)
 
-		if( this.settings.replaceSelection && (spec.templateSettings.textReplacementTemplate !== "none") ) {
+		if( this.settings.replaceSelection && (spec.settings.textReplacementTemplate !== "none") ) {
 			options.editor.replaceRange(replaceText,
 				options.editor.getCursor("from"), options.editor.getCursor("to"));
 		}
 
-		const filename =spec.templateSettings.outputDirectory + "/" + spec.data['title'] + ".md" 
+		const filename =spec.settings.outputDirectory + "/" + spec.data['title'] + ".md" 
 		try {
 			this.app.vault.create(filename, filledTemplate)
 		} catch (error) {
@@ -136,13 +125,12 @@ class FromTemplateSettingTab extends PluginSettingTab {
 	}
 
 	getDirectoryText(folder:string) : [string,string,string] {
-		console.log("Checking settings folder: " + folder)
-		const templateFolder:TFolder = this.app.vault.getAbstractFileByPath(folder) as TFolder
-		if( ! templateFolder ) {
+		const numFolders = this.plugin.templates.countTemplates(folder)
+		if( numFolders === undefined ) {
 			return [`⚠️ Directory to read templates from. '${folder}' does not exist`,'from-template-error-text','from-template-ok-text']
 		}
 		else {
-			return [`✅ Directory to read templates from. '${folder}' has ${templateFolder.children.length} templates`,'from-template-ok-text','from-template-error-text']
+			return [`✅ Directory to read templates from. '${folder}' has ${numFolders} templates`,'from-template-ok-text','from-template-error-text']
 		}
 	}
 
