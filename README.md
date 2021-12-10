@@ -4,6 +4,8 @@ This plugin adds commands to create notes based on template files. It will go th
 
 ![Template Demo](https://raw.githubusercontent.com/mo-seph/obsidian-note-from-template/master/docs/TemplateDemo.gif)
 
+Discussion thread on Obsidian Forum: https://forum.obsidian.md/t/plugin-create-notes-from-templates/23452
+
 # Quickstart
 
 An example template file might be:
