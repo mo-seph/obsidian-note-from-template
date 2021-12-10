@@ -92,13 +92,6 @@ export default class FromTemplatePlugin extends Plugin {
 		new FillTemplate(this.app,this,replacement,options).open();
 	}
 
-	// Run through the settings directory and return an TemplateSettings for each valid file there
-	async getTemplates() : Promise<TemplateSpec[]> {
-		console.log("Template settings folder: " + this.settings.templateDirectory)
-		const templateFolder:TFolder = this.app.vault.getAbstractFileByPath(this.settings.templateDirectory) as TFolder
-		if( ! templateFolder ) return []
-		return Promise.all( templateFolder.children.map( async c => this.templates.getTemplateSpec(c)) )
-	}
 
 	async templateFilled(spec:ReplacementSpec,options:ReplacementOptions) {
 		let [filledTemplate,replaceText] = await this.templates.fillOutTemplate(spec)

@@ -47,13 +47,13 @@ export default class TemplateHelper {
 		console.log("Finding templates in : " + directory)
 		const templateFolder:TFolder = this.vault.getAbstractFileByPath(directory) as TFolder
 		if( ! templateFolder ) return []
-		return Promise.all( templateFolder.children.map( async c => this.getTemplateSpec(c)) )
+		return Promise.all( templateFolder.children.map( async c => this.getTemplateSpec(c,directory)) )
 	}
 
     /*
     * Returns a specification describing the template
     */
-    async getTemplateSpec(c:TAbstractFile):Promise<TemplateSpec> {
+    async getTemplateSpec(c:TAbstractFile,directory:string):Promise<TemplateSpec> {
         if( c instanceof TFile ) {
             const data = await this.vault.read(c)
             const result = metadataParser(data)
@@ -62,7 +62,7 @@ export default class TemplateHelper {
                 id:result.metadata['template-id'] || fn.toLowerCase(),
                 name:result.metadata['template-name'] || fn,
                 template:fn,
-                templateDirectory:"",
+                templateDirectory:directory,
                 directory:result.metadata['template-output'] || "test",
                 inputFieldList:result.metadata['template-input'] || "title,body",
                 replacement:result.metadata['template-replacement'] || "[[{{title}}]]",
@@ -77,7 +77,7 @@ export default class TemplateHelper {
         const filename = directory + "/" + name + ".md"
         const file = this.vault.getAbstractFileByPath(filename);
         if (!(file instanceof TFile)) {
-            alert("Couldn't find file: " + file.path)
+            alert("Couldn't find file: " + filename)
             return
         }
         const rawTemplate = await this.vault.read(file)
