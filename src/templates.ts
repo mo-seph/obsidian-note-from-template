@@ -6,13 +6,18 @@ import { TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
 
 
 export interface TemplateSpec {
-	id: string; //Unique ID for building commands
+	id: string; //Unique ID for building commands, based on template filename
 	name: string; //Name to show for the command (probably same as the template filename, but doesn't have to be)
-	template: string; //Name of the template file
-	templateDirectory: string; //Name of the template file
-	directory: string; //Output directory for notes generated from the template
+	//template: string; //Name of the template file
+	path: string; //Path of the template file
+}
+
+export interface TemplateSettings {
+	outputDirectory: string; //Output directory for notes generated from the template
 	inputFieldList: string; //Fields to pull out of the input
-	replacement: string; //A template string for the text that will be inserted in the editor
+	textReplacementTemplate: string; //A template string for the text that will be inserted in the editor
+    templateBody:string;
+	fields:TemplateField[]; //Specifications for all of the fields in the template
 }
 
 export interface TemplateField {
@@ -26,9 +31,9 @@ export interface TemplateField {
 export interface ReplacementSpec {
 	input:string; // The currently selected text in the editor
 	template:TemplateSpec;
-	fields:TemplateField[]; //Specifications for all of the fields in the template
+    templateSettings:TemplateSettings;
 	data:Record<string,string>; //The data to fill in the template with
-	replacementText:string;
+	//replacementText:string;
 	//replacement_text:string;
 }
 
@@ -47,37 +52,48 @@ export default class TemplateHelper {
 		console.log("Finding templates in : " + directory)
 		const templateFolder:TFolder = this.vault.getAbstractFileByPath(directory) as TFolder
 		if( ! templateFolder ) return []
-		return Promise.all( templateFolder.children.map( async c => this.getTemplateSpec(c,directory)) )
+		return Promise.all( templateFolder.children.map( async c => this.getTemplateSpec(c)) )
 	}
 
     /*
     * Returns a specification describing the template
     */
-    async getTemplateSpec(c:TAbstractFile,directory:string):Promise<TemplateSpec> {
+    async getTemplateSpec(c:TAbstractFile):Promise<TemplateSpec> {
         if( c instanceof TFile ) {
-            const data = await this.vault.read(c)
-            const result = metadataParser(data)
+            const metadata = await this.readMetadata(c.path)
             const fn = c.basename
             const tmpl:TemplateSpec = {
-                id:result.metadata['template-id'] || fn.toLowerCase(),
-                name:result.metadata['template-name'] || fn,
-                template:fn,
-                templateDirectory:directory,
-                directory:result.metadata['template-output'] || "test",
-                inputFieldList:result.metadata['template-input'] || "title,body",
-                replacement:result.metadata['template-replacement'] || "[[{{title}}]]",
+                id:metadata['template-id'] || fn.toLowerCase(),
+                name:metadata['template-name'] || fn,
+                path:c.path,
             }
             return tmpl
         }
     }
 
+    async getTemplateSettings(ts:TemplateSpec):Promise<TemplateSettings> {
+        const c = this.vault.getAbstractFileByPath(ts.path) as TFile
+        if( c instanceof TFile ) {
+            const data = await this.vault.read(c)
+            const metadata = await this.readMetadata(ts.path)
+            const fn = c.basename
+            const body = await this.loadTemplate(ts)
+            const tmpl:TemplateSettings = {
+                outputDirectory:metadata['template-output'] || "test",
+                inputFieldList:metadata['template-input'] || "title,body",
+                textReplacementTemplate:metadata['template-replacement'] || "[[{{title}}]]",
+                templateBody : body,
+                fields : this.templateFields(body)
+            }
+            return tmpl
+        } 
+    }
+
     // Reads in the template file, strips out the templating ID tags from the YAML and returns the result
-    async loadTemplate(name:string,directory:string): Promise<string> {
-        //const filename = this.settings.templateDirectory + "/" + name + ".md"
-        const filename = directory + "/" + name + ".md"
-        const file = this.vault.getAbstractFileByPath(filename);
+    async loadTemplate(ts:TemplateSpec): Promise<string> {
+        const file = this.vault.getAbstractFileByPath(ts.path);
         if (!(file instanceof TFile)) {
-            alert("Couldn't find file: " + filename)
+            alert("Couldn't find file: " + ts.path)
             return
         }
         const rawTemplate = await this.vault.read(file)
@@ -96,6 +112,11 @@ export default class TemplateHelper {
         return finalTemplate
     }
 
+    async readMetadata(path:string) {
+        const data = await this.vault.read(this.vault.getAbstractFileByPath(path) as TFile)
+        const result = metadataParser(data)
+        return result.metadata
+    }
 
     templateFields(template:string): TemplateField[] {
         // Pull out the tags the Mustache finds
@@ -149,13 +170,13 @@ export default class TemplateHelper {
 		const data = spec.data
 
 		//Copy data across to all the alternative formulations of a field
-		spec.fields.forEach( f => {
+		spec.templateSettings.fields.forEach( f => {
 			f.alternatives.forEach( a => data[a] = data[f.id])
 		})
 		
-		const template = await this.loadTemplate(spec.template.name,spec.template.templateDirectory);
-		const filledTemplate = Mustache.render(template,spec.data);
-        const replaceText = Mustache.render(spec.template.replacement,spec.data)
+		//const template = await this.loadTemplate(spec.template);
+		const filledTemplate = Mustache.render(spec.templateSettings.templateBody,spec.data);
+        const replaceText = Mustache.render(spec.templateSettings.textReplacementTemplate,spec.data)
         return [filledTemplate,replaceText]
     }
 

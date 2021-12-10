@@ -68,19 +68,20 @@ export default class FromTemplatePlugin extends Plugin {
 
 	async launchTemplate(editor:Editor,ts:TemplateSpec) {
 		// Get the template text and the fields to fill in
-		const templateText = await this.templates.loadTemplate(ts.name,this.settings.templateDirectory)
-		const tempFields = this.templates.templateFields(templateText)
+		//const templateText = await this.templates.loadTemplate(ts.name,this.settings.templateDirectory)
+		//const tempFields = this.templates.templateFields(templateText)
+		const templateSettings = await this.templates.getTemplateSettings(ts)
 		// Get the input from the editor
 		const input = editor.getSelection()
 		// ... and populate the field data with it
-		const fieldData = this.templates.parseInput(input,ts.inputFieldList,this.settings.inputSplit)
+		const fieldData = this.templates.parseInput(input,templateSettings.inputFieldList,this.settings.inputSplit)
 		//This class does all the UI work
 		const replacement = {
 			input:input,
 			template:ts,
-			fields:tempFields,
+			templateSettings:templateSettings,
 			data:fieldData,
-			replacementText:ts.replacement
+			//replacementText:ts.textReplacementTemplate
 		}
 		const options:ReplacementOptions = {
 			editor:editor,
@@ -96,12 +97,12 @@ export default class FromTemplatePlugin extends Plugin {
 	async templateFilled(spec:ReplacementSpec,options:ReplacementOptions) {
 		let [filledTemplate,replaceText] = await this.templates.fillOutTemplate(spec)
 
-		if( this.settings.replaceSelection && (spec.template.replacement !== "none") ) {
+		if( this.settings.replaceSelection && (spec.templateSettings.textReplacementTemplate !== "none") ) {
 			options.editor.replaceRange(replaceText,
 				options.editor.getCursor("from"), options.editor.getCursor("to"));
 		}
 
-		const filename =spec.template.directory + "/" + spec.data['title'] + ".md" 
+		const filename =spec.templateSettings.outputDirectory + "/" + spec.data['title'] + ".md" 
 		try {
 			this.app.vault.create(filename, filledTemplate)
 		} catch (error) {

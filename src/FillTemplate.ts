@@ -28,11 +28,11 @@ export class FillTemplate extends Modal {
 
 		//Create the top of the interface - header and input for Title of the new note
 		contentEl.createEl('h2', { text: "Create from Template: " + this.result.template.name });
-		contentEl.createEl('h4', { text: "Destination: " + this.result.template.directory });
+		contentEl.createEl('h4', { text: "Destination: " + this.result.templateSettings.outputDirectory });
 		const form = contentEl.createEl('div');
 
         //Create each of the fields
-        this.result.fields.forEach( f => {
+        this.result.templateSettings.fields.forEach( f => {
             this.createInput(contentEl,this.result.data,f.id,f.inputType)
         })
 
@@ -63,9 +63,9 @@ export class FillTemplate extends Modal {
         .setDesc(("String to replace selection with. Template fields: "))
         .addText((text) => {
             replacementText = text;
-            text.setValue(this.result.replacementText)
+            text.setValue(this.result.templateSettings.textReplacementTemplate)
                 .onChange((value) => {
-                    this.result.replacementText = value
+                    this.result.templateSettings.textReplacementTemplate = value
                 });
         }).addToggle(toggle => toggle);
 
