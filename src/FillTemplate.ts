@@ -6,15 +6,18 @@ import metadataParser from 'markdown-yaml-metadata-parser'
 import { tmpdir } from 'os';
 import { notDeepStrictEqual, strictEqual } from 'assert';
 //import { BaseModal } from './BaseModal';
-import FromTemplatePlugin, { ReplacementSpec, TemplateSpec } from './main';
+import FromTemplatePlugin, { ReplacementOptions}  from './main';
+import { ReplacementSpec } from './templates';
 
 export class FillTemplate extends Modal {
 	plugin:FromTemplatePlugin
 	result:ReplacementSpec
-	constructor(app: App,plugin:FromTemplatePlugin,spec:ReplacementSpec ) {
+	options:ReplacementOptions
+	constructor(app: App,plugin:FromTemplatePlugin,spec:ReplacementSpec, options:ReplacementOptions ) {
 		super(app);
         this.result = spec
 		this.plugin = plugin;
+        this.options = options;
 	}
 
 	async onOpen() {
@@ -42,16 +45,16 @@ export class FillTemplate extends Modal {
          * For now, just using the settings value that is passed in
         */ 
         const willReplace = () => {
-            return this.result.shouldReplaceSelection
+            return this.options.shouldReplaceSelection
         }
-        this.result.willReplaceSelection = willReplace()
+        this.options.willReplaceSelection = willReplace()
         new Setting(contentEl)
         .setName('Replace selection')
         .setDesc('Should the current editor selection be replaced with a template text')
         .addToggle(toggle => toggle
-            .setValue(this.result.shouldReplaceSelection)
+            .setValue(this.options.shouldReplaceSelection)
             .onChange(async (value) => {
-                this.result.willReplaceSelection = value;
+                this.options.willReplaceSelection = value;
             }));
 
         let replacementText: TextComponent;
@@ -85,7 +88,7 @@ export class FillTemplate extends Modal {
 		submitButton.addEventListener('click', () => {
             console.log(this.result.data)
             console.log(this.result)
-            this.plugin.templateFilled(this.result)
+            this.plugin.templateFilled(this.result,this.options)
 			this.close()
 		});
 

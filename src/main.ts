@@ -5,7 +5,7 @@ import * as Mustache from 'mustache';
 import metadataParser from 'markdown-yaml-metadata-parser'
 import { BaseModal } from './BaseModal';
 import { FillTemplate } from './FillTemplate';
-import TemplateHelper, { TemplateField,  TemplateSpec } from './templates';
+import TemplateHelper, { ReplacementSpec, TemplateSpec } from './templates';
 
 // Stop mustache from escaping HTML entities as we are generating Markdown
 Mustache.escape = function(text:string) {return text;};
@@ -31,17 +31,11 @@ const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
 }
 
 
-export interface ReplacementSpec {
-	input:string; // The currently selected text in the editor
-	template:TemplateSpec;
+export interface ReplacementOptions {
 	editor:Editor;
-	fields:TemplateField[]; //Specifications for all of the fields in the template
-	data:Record<string,string>; //The data to fill in the template with
-	//replacement_text:string;
 	createNote:boolean;
 	shouldReplaceSelection:boolean;
 	willReplaceSelection:boolean;
-	replacementText:string;
 	openNote:boolean;
 }
 
@@ -59,7 +53,7 @@ export default class FromTemplatePlugin extends Plugin {
 
 	// Adds all the template commands - calls getTemplates which looks for files in the settings.templateDirectory
 	async addTemplates() {
-		const templates = await this.getTemplates()
+		const templates = await this.templates.getTemplates(this.settings.templateDirectory)
 		console.log("Got templates! ",templates)
 		templates.forEach(async t => {
 			const ts = (await t) as TemplateSpec
@@ -84,16 +78,18 @@ export default class FromTemplatePlugin extends Plugin {
 		const replacement = {
 			input:input,
 			template:ts,
-			editor:editor,
 			fields:tempFields,
 			data:fieldData,
+			replacementText:ts.replacement
+		}
+		const options:ReplacementOptions = {
+			editor:editor,
 			createNote:true,
 			openNote:true,
 			shouldReplaceSelection:this.settings.replaceSelection,
 			willReplaceSelection:this.settings.replaceSelection,
-			replacementText:ts.replacement
 		}
-		new FillTemplate(this.app,this,replacement).open();
+		new FillTemplate(this.app,this,replacement,options).open();
 	}
 
 	// Run through the settings directory and return an TemplateSettings for each valid file there
@@ -104,29 +100,19 @@ export default class FromTemplatePlugin extends Plugin {
 		return Promise.all( templateFolder.children.map( async c => this.templates.getTemplateSpec(c)) )
 	}
 
-	async templateFilled(spec:ReplacementSpec) {
-		console.log("Filling template")
-		console.log(spec)
-		const data = spec.data
-
-		//Copy data across to all the alternative formulations of a field
-		spec.fields.forEach( f => {
-			f.alternatives.forEach( a => data[a] = data[f.id])
-		})
-		
-		const template = await this.templates.loadTemplate(spec.template.name,this.settings.templateDirectory);
-		const result = Mustache.render(template,spec.data);
+	async templateFilled(spec:ReplacementSpec,options:ReplacementOptions) {
+		let [filledTemplate,replaceText] = await this.templates.fillOutTemplate(spec)
 
 		if( this.settings.replaceSelection && (spec.template.replacement !== "none") ) {
-			const replaceText = Mustache.render(spec.template.replacement,spec.data)
-			spec.editor.replaceRange(replaceText,spec.editor.getCursor("from"), spec.editor.getCursor("to"));
+			options.editor.replaceRange(replaceText,
+				options.editor.getCursor("from"), options.editor.getCursor("to"));
 		}
-		//this.createNote(spec.template.name,spec.template.directory,spec.data['title'],spec.data);
+
 		const filename =spec.template.directory + "/" + spec.data['title'] + ".md" 
 		try {
-			this.app.vault.create(spec.template.directory + "/" + spec.data['title'] + ".md", result)
+			this.app.vault.create(filename, filledTemplate)
 		} catch (error) {
-			alert("Couldn't create file: \n" + error.toString() )
+			alert("Couldn't create file: " + filename + "\n" + error.toString() )
 		}
 	}
 

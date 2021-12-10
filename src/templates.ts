@@ -2,13 +2,14 @@
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import metadataParser from 'markdown-yaml-metadata-parser'
-import { TAbstractFile, TFile, Vault } from 'obsidian';
+import { TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
 
 
 export interface TemplateSpec {
 	id: string; //Unique ID for building commands
 	name: string; //Name to show for the command (probably same as the template filename, but doesn't have to be)
 	template: string; //Name of the template file
+	templateDirectory: string; //Name of the template file
 	directory: string; //Output directory for notes generated from the template
 	inputFieldList: string; //Fields to pull out of the input
 	replacement: string; //A template string for the text that will be inserted in the editor
@@ -19,9 +20,18 @@ export interface TemplateField {
 	inputType: string // What kind of input is it?
 	args: string[]
 	alternatives: string[]
-};
+}
 
-console.log("hello")
+
+export interface ReplacementSpec {
+	input:string; // The currently selected text in the editor
+	template:TemplateSpec;
+	fields:TemplateField[]; //Specifications for all of the fields in the template
+	data:Record<string,string>; //The data to fill in the template with
+	replacementText:string;
+	//replacement_text:string;
+}
+
 
 export default class TemplateHelper {
     vault:Vault
@@ -29,6 +39,16 @@ export default class TemplateHelper {
         this.vault = vault;
     }
 
+    /*
+     * Returns all the templates in a directory
+    	Run through the settings directory and return an TemplateSettings for each valid file there
+     */
+	async getTemplates(directory:string) : Promise<TemplateSpec[]> {
+		console.log("Finding templates in : " + directory)
+		const templateFolder:TFolder = this.vault.getAbstractFileByPath(directory) as TFolder
+		if( ! templateFolder ) return []
+		return Promise.all( templateFolder.children.map( async c => this.getTemplateSpec(c)) )
+	}
 
     /*
     * Returns a specification describing the template
@@ -42,6 +62,7 @@ export default class TemplateHelper {
                 id:result.metadata['template-id'] || fn.toLowerCase(),
                 name:result.metadata['template-name'] || fn,
                 template:fn,
+                templateDirectory:"",
                 directory:result.metadata['template-output'] || "test",
                 inputFieldList:result.metadata['template-input'] || "title,body",
                 replacement:result.metadata['template-replacement'] || "[[{{title}}]]",
@@ -120,6 +141,22 @@ export default class TemplateHelper {
 
     mergeField(current:TemplateField,additional:TemplateField) {
         current.alternatives = current.alternatives.concat(additional.alternatives)
+    }
+
+    async fillOutTemplate(spec:ReplacementSpec) : Promise<[string,string]> {
+        console.log("Filling template")
+		console.log(spec)
+		const data = spec.data
+
+		//Copy data across to all the alternative formulations of a field
+		spec.fields.forEach( f => {
+			f.alternatives.forEach( a => data[a] = data[f.id])
+		})
+		
+		const template = await this.loadTemplate(spec.template.name,spec.template.templateDirectory);
+		const filledTemplate = Mustache.render(template,spec.data);
+        const replaceText = Mustache.render(spec.template.replacement,spec.data)
+        return [filledTemplate,replaceText]
     }
 
 }
