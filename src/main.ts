@@ -36,18 +36,29 @@ export interface TemplateSpec {
 	name: string; //Name to show for the command (probably same as the template filename, but doesn't have to be)
 	template: string; //Name of the template file
 	directory: string; //Output directory for notes generated from the template
-	input: string; //Fields to pull out of the input
+	inputFieldList: string; //Fields to pull out of the input
 	replacement: string; //A template string for the text that will be inserted in the editor
 }
 
+export interface TemplateField {
+	id: string //Unique id, first bit of the field
+	inputType: string // What kind of input is it?
+	args: string[]
+	alternatives: string[]
+}
+
 export interface ReplacementSpec {
-	input:string;
+	input:string; // The currently selected text in the editor
 	template:TemplateSpec;
 	editor:Editor;
-	data:Record<string,string>;
+	fields:TemplateField[]; //Specifications for all of the fields in the template
+	data:Record<string,string>; //The data to fill in the template with
 	//replacement_text:string;
-	create_note:boolean;
-	open_note:boolean;
+	createNote:boolean;
+	shouldReplaceSelection:boolean;
+	willReplaceSelection:boolean;
+	replacementText:string;
+	openNote:boolean;
 }
 
 export default class FromTemplatePlugin extends Plugin {
@@ -69,49 +80,70 @@ export default class FromTemplatePlugin extends Plugin {
 			this.addCommand( {
 				id:ts.id,
 				name: ts.name,
-				editorCallback: (editor, _ ) => {
-					//This class does all the UI work
-					const replacement = {
-						input:editor.getSelection(),
-						template:ts,
-						editor:editor,
-						data:{},
-						create_note:true,
-						open_note:true,
-					}
-					new FillTemplate(this.app,this,replacement).open();
-				}
+				editorCallback: async (editor, _ ) => { this.launchTemplate(editor,ts) }
+				
 			});
 		})
 	}
 
+	async launchTemplate(editor:Editor,ts:TemplateSpec) {
+		// Get the template text and the fields to fill in
+		const templateText = await this.loadTemplate(ts.name)
+		const templateFields = this.templateFields(templateText)
+		// Get the input from the editor
+		const input = editor.getSelection()
+		// ... and populate the field data with it
+		const fieldData = this.parseInput(input,ts.inputFieldList)
+		//This class does all the UI work
+		const replacement = {
+			input:input,
+			template:ts,
+			editor:editor,
+			fields:templateFields,
+			data:fieldData,
+			createNote:true,
+			openNote:true,
+			shouldReplaceSelection:this.settings.replaceSelection,
+			willReplaceSelection:this.settings.replaceSelection,
+			replacementText:ts.replacement
+		}
+		new FillTemplate(this.app,this,replacement).open();
+	}
 
 	// Run through the settings directory and return an TemplateSettings for each valid file there
-	async getTemplates() {
+	async getTemplates() : Promise<TemplateSpec[]> {
 		console.log("Template settings folder: " + this.settings.templateDirectory)
 		const templateFolder:TFolder = this.app.vault.getAbstractFileByPath(this.settings.templateDirectory) as TFolder
 		if( ! templateFolder ) return []
-		const templates = templateFolder.children.map( async c => {
+		const templates : Promise<TemplateSpec>[] = templateFolder.children.map( async c => {
 			if( c instanceof TFile ) {
 				const data = await this.app.vault.read(c)
 				const result = metadataParser(data)
 				const fn = c.basename
-				const tmpl = {
+				const tmpl:TemplateSpec = {
 					id:result.metadata['template-id'] || fn.toLowerCase(),
 					name:result.metadata['template-name'] || fn,
 					template:fn,
 					directory:result.metadata['template-output'] || "test",
-					input:result.metadata['template-input'] || "title,body",
+					inputFieldList:result.metadata['template-input'] || "title,body",
 					replacement:result.metadata['template-replacement'] || "[[{{title}}]]",
 				}
 				return tmpl
 			}
 		})
-		return templates
-		
+		return Promise.all(templates)
 	}
 
 	async templateFilled(spec:ReplacementSpec) {
+		console.log("Filling template")
+		console.log(spec)
+		const data = spec.data
+
+		//Copy data across to all the alternative formulations of a field
+		spec.fields.forEach( f => {
+			f.alternatives.forEach( a => data[a] = data[f.id])
+		})
+		
 		const template = await this.loadTemplate(spec.template.name);
 		const result = Mustache.render(template,spec.data);
 
@@ -150,6 +182,52 @@ export default class FromTemplatePlugin extends Plugin {
 			finalTemplate = finalTemplate.replace(re,"")
 		})
 		return finalTemplate
+	}
+
+	templateFields(template:string): TemplateField[] {
+		// Pull out the tags the Mustache finds
+		// Returns tuples of type ["name","<tag>"] - maybe other types...
+		//const templateFields: Array<Array<any>> = Mustache.parse(template);
+		const templateFields: string[][] = Mustache.parse(template);
+		
+		const titleField:TemplateField = {id:"title",inputType:"text",args:[],alternatives:[]}
+
+		const fields:TemplateField[] = [titleField]
+
+		templateFields.forEach( r => {
+			if( r[0] === "name" ) {
+				const field = this.parseField(r[1])
+				const existing = fields.find((t)=> t.id === field.id )
+				if( existing ) { this.mergeField(existing,field)}
+				else fields.push(field)
+			}
+		} )
+		return fields
+	}
+
+	parseField(input:string) : TemplateField {
+		const parts = input.split(":");
+		const id = parts[0] || input;
+		return {
+			id: id,
+			inputType: parts[1] || ( id === "body" ? "area" : "text" ),
+			args: parts.slice(2),
+			alternatives: input === id ? [] : [input]
+		}
+	}
+
+	parseInput(input:string,spec:string) : Record<string,string> {
+		const fields = spec.split(",").map(s => s.trim())
+		const input_parts = input.split(new RegExp(this.settings.inputSplit)).map(s=>s.trim())
+		const zip = (a:string[], b:string[]) => Array.from(Array(Math.min(b.length, a.length)), (_, i) => [a[i], b[i]]);
+		const r : Record<string,string> = {}
+		zip(fields,input_parts).forEach(f => r[f[0]] = f[1])
+		console.log("Got input: ",r)
+		return r
+	}
+
+	mergeField(current:TemplateField,additional:TemplateField) {
+		current.alternatives = current.alternatives.concat(additional.alternatives)
 	}
 
 	onunload() {
@@ -192,6 +270,21 @@ class FromTemplateSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		containerEl.createEl('h2', {text: 'Note From Template Settings'});
+
+		/*
+		let nameText: TextComponent;
+		new Setting(contentEl)
+		.setName("Test")
+		.setDesc(("Testing stuff?"))
+		.addText((text) => {
+			nameText = text;
+			text.setValue("Hi")
+				.onChange((value) => {
+					console.log("New text: "+value)
+					//this.setValidationError(nameText, "invalid_name");
+				});
+		});
+		*/
 
 		const dirSetting = new Setting(containerEl)
 			.setName('Template Directory')
