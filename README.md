@@ -56,5 +56,5 @@ This would
 
 # Changelog
 
-## 0.1.4
+## 0.1.5
 Big changes - completely refactored, new options, new fields, most defaults in settings, should be more responsive to template changes
