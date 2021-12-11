@@ -1,4 +1,4 @@
-import { App, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent, TextComponent, TFile, TFolder } from 'obsidian';
+import { App, DropdownComponent, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent, TextComponent, TFile, TFolder } from 'obsidian';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
@@ -7,7 +7,9 @@ import { tmpdir } from 'os';
 import { notDeepStrictEqual, strictEqual } from 'assert';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin, { ReplacementOptions}  from './main';
-import { CreateType, ReplacementSpec } from './templates';
+import { CreateType, ReplacementSpec, TemplateField } from './templates';
+
+
 
 export class FillTemplate extends Modal {
 	plugin:FromTemplatePlugin
@@ -30,7 +32,7 @@ export class FillTemplate extends Modal {
 
         //Create each of the fields
         this.result.settings.fields.forEach( f => {
-            this.createInput(contentEl,this.result.data,f.id,f.inputType)
+            this.createInput(contentEl,this.result.data,f)
         })
 
         // And the extra controls at the bottom
@@ -108,37 +110,44 @@ export class FillTemplate extends Modal {
 	 * - creates a div with a title for the control
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
-	createInput(parent:HTMLElement, data:Record<string,string>, id:string, inputType:string=null, initial:string=""){
+	createInput(parent:HTMLElement, data:Record<string,string>, field:TemplateField, initial:string=""){
+
+        const id = field.id
+        const inputType = field.inputType
         // Create div and label
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
-		const labelText = id[0].toUpperCase() + id.substring(1) + ": ";
+		const labelText = ucFirst(id) + ": ";
 		const label = controlEl.createEl("label", {text: labelText, cls:"from-template-label"})
 		label.htmlFor = id
          
         //Put the data into the record to start
-        if( initial) data[id] = initial;
+        if( initial) data[field.id] = initial;
 
-
-        //Create the control
-		switch(inputType) {
-			case "area": {
-                const t = new TextAreaComponent(controlEl)
-                    .setValue(data[id])
-                    .onChange((value) => data[id] = value)
-				t.inputEl.rows = 5;
-				t.inputEl.cols = 50;
-                t.inputEl.addClass("from-template-control")
-				break;
-			}
-			case "text": {
-                const t = new TextComponent(controlEl)
-                    .setValue(data[id])
-                    .onChange((value) => data[id] = value)
-                t.inputEl.addClass("from-template-control")
-				t.inputEl.size = 50
-				break;
-			}
-		}
+        if(inputType === "area") {
+            const t = new TextAreaComponent(controlEl)
+            .setValue(data[id])
+            .onChange((value) => data[id] = value)
+            t.inputEl.rows = 5;
+            t.inputEl.cols = 50;
+            t.inputEl.addClass("from-template-control")
+        }
+        else if( inputType === "choice") {
+            const opts: Record<string,string> = {}
+            field.args.forEach( f => opts[f] = ucFirst(f))
+            const t = new DropdownComponent(controlEl)
+            .addOptions(opts)
+            .setValue(data[id])
+            .onChange((value) => data[id] = value)
+            //t.selectEl.addClass("from-template-control")
+        }
+        else if( inputType === "text") {
+            const t = new TextComponent(controlEl)
+            .setValue(data[id])
+            .onChange((value) => data[id] = value)
+            t.inputEl.addClass("from-template-control")
+            t.inputEl.size = 50
+        }
+        
 	}
 
 	onClose() {
@@ -146,4 +155,8 @@ export class FillTemplate extends Modal {
 		contentEl.empty();
 
 	}
+};
+
+function ucFirst(s: string): string {
+    return s[0].toUpperCase() + s.substring(1) 
 }

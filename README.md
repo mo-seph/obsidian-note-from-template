@@ -57,6 +57,8 @@ This would
 
 
 # Changelog
+## 0.1.6 (in development)
+Added a choice type, e.g. `{{suit:choice:hearts:spades:diamonds:clubs}}`
 
 ## 0.1.5
 Big changes - completely refactored, new options, new fields, most defaults in settings, should be more responsive to template changes
