@@ -52,13 +52,14 @@ export default class FromTemplatePlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new FromTemplateSettingTab(this.app, this));
-		this.app.workspace.onLayoutReady(() => this.addTemplates());
+		this.app.workspace.onLayoutReady(() => this.indexTemplates());
 		this.templates = new TemplateHelper(this.app.vault)
+		this.addCommand({id:"reload",name:"Re-index Templates",callback: async () => this.indexTemplates()})
 	}
 
 	// Adds all the template commands - calls getTemplates which looks for files in the settings.templateDirectory
-	async addTemplates() {
-		this.clearCommands()
+	async indexTemplates() {
+		this.clearTemplateCommands()
 		const templates = await this.templates.getTemplates(this.settings.templateDirectory) || []
 		console.log("Got templates: ",templates.map(c => c.path).join(", "))
 		templates.forEach(async t => {
@@ -75,7 +76,7 @@ export default class FromTemplatePlugin extends Plugin {
 		})
 	}
 
-	clearCommands() {
+	clearTemplateCommands() {
 		//From https://liamca.in/Obsidian/API+FAQ/commands/unload+a+Command
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		this.addedCommands.forEach(cid => {
@@ -200,7 +201,7 @@ class FromTemplateSettingTab extends PluginSettingTab {
 			.onChange(async (value) => {
 				this.plugin.settings.templateDirectory = value;
 				updateFolderDescription(value)
-				await this.plugin.addTemplates()
+				await this.plugin.indexTemplates()
 				await this.plugin.saveSettings();
 			}));
 		
