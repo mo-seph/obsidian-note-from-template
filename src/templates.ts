@@ -133,6 +133,11 @@ export default class TemplateHelper {
         return tmpl
         } catch( error ) {
             console.log("Couldn't read template: " + c.path, error )
+            return {
+                id: c.name.toLowerCase(),
+                name: "Can't parse " + c.name,
+                path:c.path, 
+            }
         }
     }
 

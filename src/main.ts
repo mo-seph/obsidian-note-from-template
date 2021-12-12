@@ -6,6 +6,7 @@ import metadataParser from 'markdown-yaml-metadata-parser'
 import { BaseModal } from './BaseModal';
 import { FillTemplate } from './FillTemplate';
 import TemplateHelper, { CreateType, ReplacementSpec, ReplaceType, TemplateDefaults, TemplateIdentifier } from './templates';
+import { commands } from 'codemirror';
 
 // Stop mustache from escaping HTML entities as we are generating Markdown
 Mustache.escape = function(text:string) {return text;};
@@ -44,6 +45,7 @@ export interface ReplacementOptions {
 export default class FromTemplatePlugin extends Plugin {
 	settings: FromTemplatePluginSettings;
 	templates: TemplateHelper
+	addedCommands: string[] = []
 	//templateDir: string = "templates"
 
 	async onload() {
@@ -55,19 +57,33 @@ export default class FromTemplatePlugin extends Plugin {
 
 	// Adds all the template commands - calls getTemplates which looks for files in the settings.templateDirectory
 	async addTemplates() {
+		this.clearCommands()
 		const templates = await this.templates.getTemplates(this.settings.templateDirectory) || []
 		console.log("Got templates: ",templates.map(c => c.path).join(", "))
 		templates.forEach(async t => {
 			if( t ) {
 				const ts = (await t) as TemplateIdentifier
-				this.addCommand( {
+				const command = this.addCommand( {
 					id:ts.id,
 					name: ts.name,
 					editorCallback: async (editor, _ ) => { this.launchTemplate(editor,ts) }
 					
 				});
+				this.addedCommands.push( command.id )
 			}
 		})
+	}
+
+	clearCommands() {
+		//From https://liamca.in/Obsidian/API+FAQ/commands/unload+a+Command
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		this.addedCommands.forEach(cid => {
+			try {
+				(this.app as any).commands.removeCommand(cid)
+			} catch(error) {
+				console.log("Could not remove command: ",error)
+			}
+		} )
 	}
 
 	async launchTemplate(editor:Editor,ts:TemplateIdentifier) {
@@ -183,6 +199,7 @@ class FromTemplateSettingTab extends PluginSettingTab {
 			.onChange(async (value) => {
 				this.plugin.settings.templateDirectory = value;
 				updateFolderDescription(value)
+				await this.plugin.addTemplates()
 				await this.plugin.saveSettings();
 			}));
 		
