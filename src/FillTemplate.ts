@@ -1,4 +1,4 @@
-import { App, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder } from 'obsidian';
+import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder } from 'obsidian';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
@@ -8,6 +8,7 @@ import { notDeepStrictEqual, strictEqual } from 'assert';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin, { ReplacementOptions}  from './main';
 import { CreateType, ReplacementSpec, TemplateField } from './templates';
+import { settings } from 'cluster';
 
 
 
@@ -26,14 +27,27 @@ export class FillTemplate extends Modal {
 		let {contentEl} = this;
 
 		//Create the top of the interface - header and input for Title of the new note
-		contentEl.createEl('h2', { text: "Create from Template: " + this.result.templateID.name });
-		contentEl.createEl('h4', { text: "Destination: " + this.result.settings.outputDirectory });
-		const form = contentEl.createEl('div');
+   
+		contentEl.createEl('h2', { text: "Create from Template"});
+        contentEl.createEl("hr")
 
         //Create each of the fields
         this.result.settings.fields.forEach( f => {
             this.createInput(contentEl,this.result.data,f)
         })
+
+        const makeSubcontrol = (el:HTMLElement,title:string,content:string="",cls:string[]=[]) => {
+            const sc = contentEl.createDiv({cls:["from-template-subsection","setting-item-description"]})
+            sc.createSpan({text: `${title}:`,cls:"from-template-sublabel"}) 
+            return sc.createSpan({text: `${content}`,cls:["from-template-subcontrol",...cls]}) 
+        }
+
+        // An info box...
+        makeSubcontrol(contentEl,"Template",`${this.result.templateID.name}`)
+        makeSubcontrol(contentEl,"Destination",
+            `${this.result.settings.outputDirectory}/${this.result.settings.templateFilename}.md`,
+            ["from-template-code-span"]
+            )
 
         // And the extra controls at the bottom
 
@@ -54,8 +68,12 @@ export class FillTemplate extends Modal {
         fieldNames.push("templateResult")
      
         let replacementText: TextComponent;
-        new Setting(contentEl)
-        .setName("Replacement String")
+        const setReplaceText = (r:string) => {
+            replacementText.setValue(r)
+            this.result.replacementTemplate = r
+        }
+        const replaceSetting = new Setting(contentEl)
+        .setName("Replace selected text")
         //.setDesc(("String to replace selection with. Template fields: "+))
         //.setDesc(("String to replace selection with."))
         .addToggle(toggle => toggle
@@ -64,15 +82,36 @@ export class FillTemplate extends Modal {
                 this.options.willReplaceSelection = value;
                 replacementText.setDisabled(!value)
             }))
-        .addText((text) => {
-            replacementText = text;
-            text.setValue(this.result.settings.textReplacementTemplate)
-                .onChange((value) => {
-                    this.result.settings.textReplacementTemplate = value
-                })
-                .setDisabled(!willReplace());
+
+        //const repDiv = contentEl.createEl("div", {text: "Replacement: ", cls:"setting-item-description"})
+        const repDiv = makeSubcontrol(contentEl,"Replacement")
+        replacementText = new TextComponent(repDiv)
+            .setValue(this.result.replacementTemplate)
+            .onChange((value) => {
+                this.result.replacementTemplate =  value
+            })
+            .setDisabled(!willReplace());
+        //replacementText.inputEl.size = 60
+
+
+
+        const availFields = makeSubcontrol(contentEl,"Available")
+        //const availFields = contentEl.createEl("div", {text: "Available fields: " , cls:"setting-item-description"})
+        fieldNames.forEach(f => {
+            const s = availFields.createEl("button",{text:f, cls:["from-template-inline-code-button"]})
+            s.onClickEvent((e) => setReplaceText( replacementText.getValue() + `{{${f}}}` ) )
         })
-        const label = contentEl.createEl("div", {text: "Available fields: " + fieldNames.join(", "), cls:"setting-item-description"})
+        
+
+        // Create buttons for the alternative replacements
+        const alternatives = makeSubcontrol(contentEl,"Replacements")
+        //const alternatives = contentEl.createEl("div", { text: `Replacements:`, cls:["setting-item-description","from-template-command-list"]})
+        this.result.settings.textReplacementTemplates.forEach( r => {
+            new ButtonComponent(alternatives)
+                .setButtonText(r).onClick((e) => setReplaceText(r))
+            .buttonEl.addClass("from-template-inline-code-button")
+        })
+
         new Setting(contentEl)
         .setName("Create and open note")
         .setDesc(("Should the note be created / opened?"))

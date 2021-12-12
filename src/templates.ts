@@ -23,7 +23,7 @@ export interface TemplateIdentifier {
 export interface TemplateSettings {
 	outputDirectory: string; //Output directory for notes generated from the template
 	inputFieldList: string; //Fields to pull out of the input
-	textReplacementTemplate: string; //A template string for the text that will be inserted in the editor
+	textReplacementTemplates: string[]; //A template string for the text that will be inserted in the editor
 	templateFilename: string; //A template string for the text that will be inserted in the editor
     templateBody:string;
 	fields:TemplateField[]; //Specifications for all of the fields in the template
@@ -52,6 +52,7 @@ export interface ReplacementSpec {
 	input:string; // The currently selected text in the editor
 	templateID:TemplateIdentifier; //Keep hold of the template ID just in case
     settings:TemplateSettings; //All the settings of the template
+    replacementTemplate:string // The chosen template for replacing selected editor text
 	data:Record<string,string>; //The data to fill in the template with
 }
 
@@ -86,7 +87,7 @@ export default class TemplateHelper {
 		//const template = await this.loadTemplate(spec.template);
 		const filledTemplate = Mustache.render(spec.settings.templateBody,spec.data);
         spec.data['templateResult'] = metadataParser(filledTemplate).content
-        const replaceText = Mustache.render(spec.settings.textReplacementTemplate,spec.data)
+        const replaceText = Mustache.render(spec.replacementTemplate,spec.data)
         const filename = Mustache.render(spec.settings.templateFilename,spec.data)
         return [filledTemplate,replaceText,filename]
     }
@@ -104,6 +105,7 @@ export default class TemplateHelper {
             input:input,
 			templateID:ts,
 			settings:templateSettings,
+            replacementTemplate:templateSettings.textReplacementTemplates[0],
 			data:fieldData,
 		}
     }
@@ -163,7 +165,7 @@ export default class TemplateHelper {
             const tmpl:TemplateSettings = {
                 outputDirectory:metadata['template-output'] || defaults.outputDirectory,
                 inputFieldList:metadata['template-input'] || defaults.inputFieldList,
-                textReplacementTemplate:metadata['template-replacement'] || defaults.textReplacementTemplate,
+                textReplacementTemplates:this.ensureArray( metadata['template-replacement'], defaults.textReplacementTemplate ),
                 shouldReplaceInput:metadata['template-should-replace'] || defaults.replaceSelection,
                 shouldCreateOpen:metadata['template-should-create'] || defaults.createOpen,
                 templateFilename:metadata['template-filename'] || defaults.templateFilename,
@@ -172,6 +174,14 @@ export default class TemplateHelper {
             }
             return tmpl
         } 
+    }
+
+    ensureArray(a:any,backup:string=null) : string[] {
+        const backupValue = backup ? [backup] : []
+        if( !a ) return backupValue
+        if( a instanceof Array ) return a
+        if( typeof a === "string" ) return [a]
+        return backupValue
     }
 
     // Reads in the template file, strips out the templating ID tags from the YAML and returns the result

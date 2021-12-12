@@ -14,18 +14,57 @@
 
 .from-template-control {
     font-size:large;
-    width: 300pt;
+    width: 400pt;
     padding: 0;
 }
+
+
 
 .from-template-section {
     padding: 6pt;
     text-align:right;
 }
 
+.from-template-subsection {
+    padding: 0pt;
+    text-align:right;
+}
+.from-template-sublabel {
+    vertical-align: top;
+    padding: 0pt 6pt;
+}
+.from-template-subcontrol {
+    display: inline-block;
+    width: 400pt;
+    padding: 3pt 6pt;
+    text-align:left;
+}
+
+
+
 .from-template-error-text {
     color: #f00
 }
 .from-template-ok-text {
     color: #afa
+}
+
+.from-template-code-span {
+    font-family:monospace;
+    color: var(--text-normal);
+}
+.from-template-inline-code-button {
+    font-family: monospace;
+    color: var(--text-normal);
+    padding: 2px 6px;
+    margin-left: 4px;
+    margin-right: 4px;
+    border: 1px solid var(--interactive-accent);
+}
+.from-template-inline-code-button:hover {
+    color: var(--interactive-accent);
+}
+
+.from-template-command-list {
+    max-width: 80%;
 }
