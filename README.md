@@ -44,11 +44,25 @@ This would
 | template-id | Unique ID for the template | Lowercase version of the base name |
 | template-name | Name for the command | Base name of the file |
 | template-output | Directory to save the output | test |
-| template-filename | Filename for the created note. Will have `.md` appended | `{{title}}` |
+| template-filename | Filename for the created note. Will have `.md` appended. Note: if you set a different filename, then make sure to use `{{filename}}` in the `template-replacement` strings if you want to link to the file. | `{{title}}` |
 | template-replacement | A Mustache template to replace the selected text in the editor with. Can pass a list, which will appear as buttons in creator | `{{[[title]]}}` |
 | template-input | If the command is called with some text selected, split it up using the plugin's split pattern, and put the values into those fields | title,body |
 | template-should-replace | Should the template write text back to the document? "always", "sometimes" = only if text is selected, "never"| "sometimes" |
 | template-should-create | Should the template make and open a note? "none"=no note, "create"= create but don't open, "open"=create and open in current editor, "open-pane" = create and open in new pane | "create" |
+
+### Examples
+- Create a new note with a complex filename, then insert the title with a transclusion of the overview:
+``` 
+template-filename: "{{title}} - autocreated"
+template-replacement: "{{title}} - ![[{{filename#^overview}}]]"
+```
+- Template will always put the result back into the current document:
+```
+template-should-create: "none"
+template-should-replace: "always"
+template-replacement: "{{templateResult}}"
+```
+
 
 ## Field Types
 | Type | Args | Description | Example(s) |

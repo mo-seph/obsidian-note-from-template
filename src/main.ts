@@ -109,12 +109,11 @@ export default class FromTemplatePlugin extends Plugin {
 
 		console.log(spec)
 		console.log(options)
-		if( options.willReplaceSelection ) {
-			options.editor.replaceRange(replaceText,
-				options.editor.getCursor("from"), options.editor.getCursor("to"));
-		}
 
+
+		let createFailed = false
 		if( options.shouldCreateOpen !== "none" ) {
+			createFailed = true
 			const path =spec.settings.outputDirectory + "/" + filename + ".md" 
 			try {
 				const newFile = await this.app.vault.create(path, filledTemplate)
@@ -124,9 +123,14 @@ export default class FromTemplatePlugin extends Plugin {
 				else if( options.shouldCreateOpen === "open-pane") {
 					this.app.workspace.splitActiveLeaf().openFile(newFile)
 				}
+				createFailed = false
 			} catch (error) {
 				alert("Couldn't create file: " + filename + "\n" + error.toString() )
 			}
+		}
+		if( options.willReplaceSelection && !createFailed ) {
+			options.editor.replaceRange(replaceText,
+				options.editor.getCursor("from"), options.editor.getCursor("to"));
 		}
 	}
 
