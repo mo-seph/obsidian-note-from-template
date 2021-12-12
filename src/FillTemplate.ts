@@ -1,4 +1,4 @@
-import { App, DropdownComponent, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent, TextComponent, TFile, TFolder } from 'obsidian';
+import { App, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder } from 'obsidian';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
@@ -140,6 +140,20 @@ export class FillTemplate extends Modal {
             .onChange((value) => data[id] = value)
             //t.selectEl.addClass("from-template-control")
         }
+        /*
+        else if( inputType === "search") {
+            const t = new SearchComponent(controlEl)
+            //.setValue(data[id])
+            .onChange((value) => data[id] = value)
+            t.inputEl.addClass("from-template-control")
+        }
+        else if( inputType === "moment") {
+            const t = new MomentFormatComponent(controlEl)
+            //.setValue(data[id])
+            .onChange((value) => data[id] = value)
+            t.inputEl.addClass("from-template-control")
+        }
+        */
         else if( inputType === "text") {
             const t = new TextComponent(controlEl)
             .setValue(data[id])
