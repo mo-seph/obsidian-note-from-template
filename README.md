@@ -78,7 +78,7 @@ Some hotkeys are defined:
 
 
 # Changelog
-## 0.1.6 (in development)
+## 0.1.6 
 - Templates now loaded dynamically - no more restarts! (also: changed template folder selection to dropdown,command for re-indexing)
 - Added a choice type, e.g. `{{suit:choice:hearts:spades:diamonds:clubs}}`
 - Note filenames are now generated from a template string, either in config, or in `template-filename` in the template. Defaults to `{{title}}`, but all template fields available.
