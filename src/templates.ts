@@ -5,6 +5,17 @@ import metadataParser from 'markdown-yaml-metadata-parser'
 import { TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
 import { defaultMaxListeners } from 'events';
 
+// Which are the YAML fields used by the template system
+const TEMPLATE_FIELDS = [
+    "template-id",
+    "template-name",
+    "template-replacement",
+    "template-input",
+    "template-output",
+    "template-filename",
+    "template-should-replace",
+    "template-should-create"
+]
 
 /*
  * Identifies the template in the vault - used to create the command for it
@@ -128,7 +139,7 @@ export default class TemplateHelper {
     async getTemplateIdentifier(c:TFile) {
         try {
 
-        const metadata = await this.readMetadata(c.path)
+        const metadata = (await this.readMetadata(c.path) ).metadata
         const fn = c.basename
         const tmpl:TemplateIdentifier = {
             id:metadata['template-id'] || fn.toLowerCase(),
@@ -146,22 +157,27 @@ export default class TemplateHelper {
         }
     }
 
-    /*
-    * Returns a specification describing the template
-    */
-   /*
-    async getTemplateID(c:TAbstractFile):Promise<TemplateIdentifier> {
-     
+
+    // Gets the YAML metadata for the given template path
+    async readMetadata(path:string) {
+        try {
+            const data = await this.vault.read(this.vault.getAbstractFileByPath(path) as TFile)
+            const result = metadataParser(data)
+            return metadataParser(data)
+        } catch (error) {
+            console.log("Couldn't read template file "+path, error)
+        }
     }
-    */
 
     async getTemplateSettings(ts:TemplateIdentifier,defaults:TemplateDefaults):Promise<TemplateSettings> {
         const c = this.vault.getAbstractFileByPath(ts.path) as TFile
         if( c instanceof TFile ) {
-            const data = await this.vault.read(c)
-            const metadata = await this.readMetadata(ts.path)
-            const fn = c.basename
-            const body = await this.getTemplateBody(ts)
+
+            const template_data = await this.readMetadata(ts.path)
+            if(! template_data ) return new Promise(null)
+            const metadata = template_data.metadata
+            const body = this.removeExtraYAML(metadata, template_data.content,TEMPLATE_FIELDS)
+
             const tmpl:TemplateSettings = {
                 outputDirectory:metadata['template-output'] || defaults.outputDirectory,
                 inputFieldList:metadata['template-input'] || defaults.inputFieldList,
@@ -184,37 +200,31 @@ export default class TemplateHelper {
         return backupValue
     }
 
-    // Reads in the template file, strips out the templating ID tags from the YAML and returns the result
-    async getTemplateBody(ts:TemplateIdentifier): Promise<string> {
-        const file = this.vault.getAbstractFileByPath(ts.path);
-        if (!(file instanceof TFile)) {
-            alert("Couldn't find file: " + ts.path)
-            return
-        }
-        const rawTemplate = await this.vault.read(file)
-        var finalTemplate = rawTemplate
-        const templateFields = [
-            "template-id",
-            "template-name",
-            "template-replacement",
-            "template-input",
-            "template-output",
-            "template-should-replace",
-            "template-should-create"
-        ]
-        templateFields.forEach(tf => {
-            const re = new RegExp(tf + ".*\n")
-            finalTemplate = finalTemplate.replace(re,"")
-        })
-        return finalTemplate
+    /*
+     * Strips out any of the YAML tags given in TEMPLATE_FIELDs from the template, and 
+     * sticks it back together. Unfortuantely, doesn't guarantee order of fields,
+     * and the status of quotes is a bit wobbly
+     */
+    removeExtraYAML(metadata:Record<string,any>,body:string,fields:string[]=TEMPLATE_FIELDS) : string {
+        const md = {...metadata}
+        fields.forEach(f => delete md[f])
+        let yamlBlock = "---\n"
+        for( const k in md ) {
+            const v = md[k]
+            if( typeof v === 'string' ) yamlBlock += `${k}: ${this.quoteYAML(v)}\n`
+            if( v instanceof Array ) {
+                yamlBlock += `${k}:\n`
+                v.forEach((x) =>  yamlBlock += `- ${this.quoteYAML(x)}\n`)
+            }
+        } 
+        yamlBlock += "---\n" 
+        return yamlBlock + body
+    }
+    //Quote YAML values if necessary - not implemented
+    quoteYAML(s:string) : string {
+        return s
     }
 
-    // Gets the YAML metadata for the given template path
-    async readMetadata(path:string) {
-        const data = await this.vault.read(this.vault.getAbstractFileByPath(path) as TFile)
-        const result = metadataParser(data)
-        return result.metadata
-    }
 
     // Pull out the tags that Mustache finds and turn them into TemplateFields ready for use
     getTemplateFields(template:string): TemplateField[] {
