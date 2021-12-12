@@ -57,6 +57,11 @@ export interface ReplacementSpec {
 export type ReplaceType = "always" | "sometimes" | "never"
 export type CreateType = "none" | "create" | "open" | "open-pane"
 
+export interface TemplateFolderSpec {
+    location:TFolder
+    depth:number
+    numTemplates:number
+}
 
 export default class TemplateHelper {
     vault:Vault
@@ -256,5 +261,16 @@ export default class TemplateHelper {
         if( !templateFolder ) return undefined
         let templates  = templateFolder.children.filter(t => t.path.endsWith(".md"))
         return templates.length
+    }
+
+    getTemplateFolders() {
+        const descend = (t:TFolder,i:number,all:TemplateFolderSpec[]) => {
+            if(i > 0) all.push({location:t,depth:i+1,numTemplates:this.countTemplates(t.path)})
+            t.children.filter(f => f instanceof TFolder).forEach(f => descend(f as TFolder,i+1,all))
+        }
+        const result:TemplateFolderSpec[] = []
+        descend(this.vault.getRoot(),0,result)
+        console.log(result)
+        return result
     }
 }

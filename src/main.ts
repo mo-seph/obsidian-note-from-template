@@ -159,6 +159,7 @@ class FromTemplateSettingTab extends PluginSettingTab {
 			.setName('Template Directory')
 			.setDesc('Directory to read templates from')
 
+		// Finding the right template folder
 		const updateFolderDescription = (folder:string) => {
 			try {
 			let [text,clss,r_clss] = this.getDirectoryText(folder)
@@ -169,15 +170,25 @@ class FromTemplateSettingTab extends PluginSettingTab {
 
 			}
 		}
-		dirSetting.addText(text => text
-				.setPlaceholder('templates')
-				.setValue(this.plugin.settings.templateDirectory)
-				.onChange(async (value) => {
-					this.plugin.settings.templateDirectory = value;
-					updateFolderDescription(value)
-					await this.plugin.saveSettings();
-				}));
+
+		const folders = this.plugin.templates.getTemplateFolders()
+		const opts : Record<string,string> = {}
+		folders.forEach(f => opts[f.location.path] =
+			("-".repeat(f.depth-1) + ` ${f.location.name} (${f.numTemplates})` )
+		)
+		dirSetting.addDropdown(text => text
+			//.setPlaceholder('templates')
+			.addOptions(opts)
+			.setValue(this.plugin.settings.templateDirectory)
+			.onChange(async (value) => {
+				this.plugin.settings.templateDirectory = value;
+				updateFolderDescription(value)
+				await this.plugin.saveSettings();
+			}));
+		
 		updateFolderDescription(this.plugin.settings.templateDirectory)
+
+
 		new Setting(containerEl)
 			.setName('Replace selection')
 			.setDesc('Should the current editor selection be replaced with a link to the title of the new Note?')
