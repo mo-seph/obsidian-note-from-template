@@ -1,4 +1,4 @@
-import { App, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting, TextComponent, TFile, TFolder } from 'obsidian';
+import { App, Editor, Modal, normalizePath, Notice, Plugin, PluginSettingTab, Setting, TextComponent, TFile, TFolder } from 'obsidian';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
@@ -25,6 +25,7 @@ interface FromTemplatePluginSettings extends TemplateDefaults {
 
 const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
 	outputDirectory:"test",
+	templateFilename:"{{title}}",
 	inputFieldList:"title,body",
 	textReplacementTemplate:"[[{{title}}]]",
 	templateDirectory: 'templates',
@@ -103,7 +104,7 @@ export default class FromTemplatePlugin extends Plugin {
 
 
 	async templateFilled(spec:ReplacementSpec,options:ReplacementOptions) {
-		let [filledTemplate,replaceText] = await this.templates.fillOutTemplate(spec)
+		let [filledTemplate,replaceText,filename] = await this.templates.fillOutTemplate(spec)
 
 		console.log(spec)
 		console.log(options)
@@ -113,10 +114,10 @@ export default class FromTemplatePlugin extends Plugin {
 		}
 
 		if( options.shouldCreateOpen !== "none" ) {
-			const filetitle = spec.data['title'].replace(/[^a-zA-Z0-9 -:]/g,"") //Quick and dirty regex for usable titles
-			const filename =spec.settings.outputDirectory + "/" + filetitle + ".md" 
+			const filetitle = normalizePath(filename.replace(/[^a-zA-Z0-9 -:]/g,"")) //Quick and dirty regex for usable titles
+			const path =spec.settings.outputDirectory + "/" + filetitle + ".md" 
 			try {
-				const newFile = await this.app.vault.create(filename, filledTemplate)
+				const newFile = await this.app.vault.create(path, filledTemplate)
 				if( options.shouldCreateOpen === "open") {
 					this.app.workspace.activeLeaf.openFile(newFile)
 				} 
@@ -238,6 +239,16 @@ class FromTemplateSettingTab extends PluginSettingTab {
 			.setValue(this.plugin.settings.outputDirectory)
 			.onChange(async (value) => {
 				this.plugin.settings.outputDirectory = value;
+				await this.plugin.saveSettings();
+			}));
+		new Setting(containerEl)
+		.setName('Default template filename')
+		.setDesc('Where to put notes if they have not specified with {{template-output}}')
+		.addText(text => text
+			.setPlaceholder("{{title}}")
+			.setValue(this.plugin.settings.templateFilename)
+			.onChange(async (value) => {
+				this.plugin.settings.templateFilename = value;
 				await this.plugin.saveSettings();
 			}));
 		new Setting(containerEl)

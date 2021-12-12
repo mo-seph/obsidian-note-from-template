@@ -24,6 +24,7 @@ export interface TemplateSettings {
 	outputDirectory: string; //Output directory for notes generated from the template
 	inputFieldList: string; //Fields to pull out of the input
 	textReplacementTemplate: string; //A template string for the text that will be inserted in the editor
+	templateFilename: string; //A template string for the text that will be inserted in the editor
     templateBody:string;
 	fields:TemplateField[]; //Specifications for all of the fields in the template
     shouldReplaceInput: ReplaceType
@@ -36,6 +37,7 @@ export interface TemplateDefaults {
     outputDirectory:string
     inputFieldList:string
     textReplacementTemplate:string
+    templateFilename:string
 }
 
 export interface TemplateField {
@@ -74,7 +76,7 @@ export default class TemplateHelper {
     - a filled out version of the template body
     - a filled out version of the currently selected text in the editor
     */
-    async fillOutTemplate(spec:ReplacementSpec) : Promise<[string,string]> {
+    async fillOutTemplate(spec:ReplacementSpec) : Promise<[string,string,string]> {
 
 		//Copy data across to all the alternative formulations of a field
 		spec.settings.fields.forEach( f => {
@@ -85,7 +87,8 @@ export default class TemplateHelper {
 		const filledTemplate = Mustache.render(spec.settings.templateBody,spec.data);
         spec.data['templateResult'] = metadataParser(filledTemplate).content
         const replaceText = Mustache.render(spec.settings.textReplacementTemplate,spec.data)
-        return [filledTemplate,replaceText]
+        const filename = Mustache.render(spec.settings.templateFilename,spec.data)
+        return [filledTemplate,replaceText,filename]
     }
 
     /*
@@ -163,6 +166,7 @@ export default class TemplateHelper {
                 textReplacementTemplate:metadata['template-replacement'] || defaults.textReplacementTemplate,
                 shouldReplaceInput:metadata['template-should-replace'] || defaults.replaceSelection,
                 shouldCreateOpen:metadata['template-should-create'] || defaults.createOpen,
+                templateFilename:metadata['template-filename'] || defaults.templateFilename,
                 templateBody : body,
                 fields : this.getTemplateFields(body)
             }
