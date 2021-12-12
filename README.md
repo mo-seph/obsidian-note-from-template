@@ -44,6 +44,7 @@ This would
 | template-id | Unique ID for the template | Lowercase version of the base name |
 | template-name | Name for the command | Base name of the file |
 | template-output | Directory to save the output | test |
+| template-filename | Filename for the created note. Will have `.md` appended | `{{title}}` |
 | template-replacement | A Mustache template to replace the selected text in the editor with | `{{[[title]]}}` |
 | template-input | If the command is called with some text selected, split it up using the plugin's split pattern, and put the values into those fields | title,body |
 | template-should-replace | Should the template write text back to the document? "always", "sometimes" = only if text is selected, "never"| "sometimes" |
@@ -61,6 +62,7 @@ This would
 ##
 - Templates now loaded dynamically - no more restarts! (also: changed template folder selection to dropdown)
 - Added a choice type, e.g. `{{suit:choice:hearts:spades:diamonds:clubs}}`
+- Note filenames are now generated from a template string, either in config, or in `template-filename` in the template. Defaults to `{{title}}`, but all template fields available.
 
 ## 0.1.5
 Big changes - completely refactored, new options, new fields, most defaults in settings, should be more responsive to template changes
