@@ -77,13 +77,15 @@ Some hotkeys are defined:
 - Ctrl + (1-9): select replacement string N
 
 
-# Changelog
-## 0.1.6 
+# Development
+Very open to collaboration - drop me a line or PR
+## Changelog
+### 0.1.6 
 - Templates now loaded dynamically - no more restarts! (also: changed template folder selection to dropdown,command for re-indexing)
 - Added a choice type, e.g. `{{suit:choice:hearts:spades:diamonds:clubs}}`
 - Note filenames are now generated from a template string, either in config, or in `template-filename` in the template. Defaults to `{{title}}`, but all template fields available.
 - Added multiple replacement text possibility - If an array is given for `template-replacement`, then these will all be options in the template dialog
 - Many UI tweaks, fixed YAML parsing
 
-## 0.1.5
+### 0.1.5
 Big changes - completely refactored, new options, new fields, most defaults in settings, should be more responsive to template changes
