@@ -2,7 +2,7 @@
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import metadataParser from 'markdown-yaml-metadata-parser'
-import { TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
+import { normalizePath, TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
 import { defaultMaxListeners } from 'events';
 
 // Which are the YAML fields used by the template system
@@ -98,8 +98,10 @@ export default class TemplateHelper {
 		//const template = await this.loadTemplate(spec.template);
 		const filledTemplate = Mustache.render(spec.settings.templateBody,spec.data);
         spec.data['templateResult'] = metadataParser(filledTemplate).content
+        const raw_filename = Mustache.render(spec.settings.templateFilename,spec.data)
+        const filename = normalizePath(raw_filename.replace(/[^a-zA-Z0-9 -:]/g,"")) //Quick and dirty regex for usable titles
+        spec.data['filename'] = filename
         const replaceText = Mustache.render(spec.replacementTemplate,spec.data)
-        const filename = Mustache.render(spec.settings.templateFilename,spec.data)
         return [filledTemplate,replaceText,filename]
     }
 

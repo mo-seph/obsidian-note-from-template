@@ -115,8 +115,7 @@ export default class FromTemplatePlugin extends Plugin {
 		}
 
 		if( options.shouldCreateOpen !== "none" ) {
-			const filetitle = normalizePath(filename.replace(/[^a-zA-Z0-9 -:]/g,"")) //Quick and dirty regex for usable titles
-			const path =spec.settings.outputDirectory + "/" + filetitle + ".md" 
+			const path =spec.settings.outputDirectory + "/" + filename + ".md" 
 			try {
 				const newFile = await this.app.vault.create(path, filledTemplate)
 				if( options.shouldCreateOpen === "open") {
