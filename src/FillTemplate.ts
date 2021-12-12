@@ -1,4 +1,4 @@
-import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder } from 'obsidian';
+import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder, Modifier } from 'obsidian';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
@@ -28,12 +28,12 @@ export class FillTemplate extends Modal {
 
 		//Create the top of the interface - header and input for Title of the new note
    
-		contentEl.createEl('h2', { text: "Create from Template"});
-        contentEl.createEl("hr")
+
+		this.titleEl.createEl('h4', { text: "Create from Template"});
 
         //Create each of the fields
-        this.result.settings.fields.forEach( f => {
-            this.createInput(contentEl,this.result.data,f)
+        this.result.settings.fields.forEach( (f,i) => {
+            this.createInput(contentEl,this.result.data,f,i)
         })
 
         const makeSubcontrol = (el:HTMLElement,title:string,content:string="",cls:string[]=[]) => {
@@ -106,10 +106,12 @@ export class FillTemplate extends Modal {
         // Create buttons for the alternative replacements
         const alternatives = makeSubcontrol(contentEl,"Replacements")
         //const alternatives = contentEl.createEl("div", { text: `Replacements:`, cls:["setting-item-description","from-template-command-list"]})
-        this.result.settings.textReplacementTemplates.forEach( r => {
-            new ButtonComponent(alternatives)
-                .setButtonText(r).onClick((e) => setReplaceText(r))
-            .buttonEl.addClass("from-template-inline-code-button")
+        this.result.settings.textReplacementTemplates.forEach( (r,i) => {
+            const el = new ButtonComponent(alternatives)
+                .setButtonText(`${i+1}: ${r}`).onClick((e) => setReplaceText(r)).buttonEl
+            el.addClass("from-template-inline-code-button")
+            el.tabIndex = -1
+            this.scope.register(['Ctrl'],`${i+1}`,()=>setReplaceText(r))
         })
 
         new Setting(contentEl)
@@ -125,18 +127,19 @@ export class FillTemplate extends Modal {
             .onChange((value) => {
                 this.options.shouldCreateOpen = value as CreateType
             });
-        });            
-	
-		//And a submit button
-		const submit = contentEl.createDiv({cls:"from-template-section"})
-		const submitButton = submit.createEl('button', { text: "Add", cls:"from-template-submit" });
-		//submitButton.style.cssText = 'align: right;';
+        });
 
-		//On submit, get the data out of the form, pass through to main plugin for processing
-		submitButton.addEventListener('click', () => {
+        //On submit, get the data out of the form, pass through to main plugin for processing
+        const submitTemplate = () => {
             this.plugin.templateFilled(this.result,this.options)
 			this.close()
-		});
+        }
+	
+		//And a submit button
+		contentEl.createDiv({cls:"from-template-section"})
+            .createEl('button', { text: "Add", cls:"from-template-submit" })
+                .addEventListener("click",submitTemplate);
+        this.scope.register(['Mod'],"enter",submitTemplate)
 
 	}
 
@@ -149,26 +152,28 @@ export class FillTemplate extends Modal {
 	 * - creates a div with a title for the control
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
-	createInput(parent:HTMLElement, data:Record<string,string>, field:TemplateField, initial:string=""){
+	createInput(parent:HTMLElement, data:Record<string,string>, field:TemplateField, index:number=-1, initial:string=""){
 
         const id = field.id
         const inputType = field.inputType
         // Create div and label
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
-		const labelText = ucFirst(id) + ": ";
+        
+		const labelText = index < 9 ? `${ucFirst(id)} (${index+1}): ` : `${ucFirst(id)}: `;
 		const label = controlEl.createEl("label", {text: labelText, cls:"from-template-label"})
 		label.htmlFor = id
          
         //Put the data into the record to start
         if( initial) data[field.id] = initial;
 
+        let element:HTMLElement
+
         if(inputType === "area") {
             const t = new TextAreaComponent(controlEl)
             .setValue(data[id])
             .onChange((value) => data[id] = value)
             t.inputEl.rows = 5;
-            t.inputEl.cols = 50;
-            t.inputEl.addClass("from-template-control")
+            element = t.inputEl
         }
         else if( inputType === "choice") {
             const opts: Record<string,string> = {}
@@ -177,7 +182,7 @@ export class FillTemplate extends Modal {
             .addOptions(opts)
             .setValue(data[id])
             .onChange((value) => data[id] = value)
-            //t.selectEl.addClass("from-template-control")
+            element = t.selectEl
         }
         /*
         else if( inputType === "search") {
@@ -197,8 +202,14 @@ export class FillTemplate extends Modal {
             const t = new TextComponent(controlEl)
             .setValue(data[id])
             .onChange((value) => data[id] = value)
-            t.inputEl.addClass("from-template-control")
             t.inputEl.size = 50
+            element = t.inputEl
+        }
+
+        if( element ) {
+            if( index === 0 ) element.focus()
+            element.addClass("from-template-control")
+            if( index <= 8 ) this.scope.register(["Mod"],`${index+1}`,()=>element.focus())
         }
         
 	}

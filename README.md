@@ -56,15 +56,20 @@ This would
 | text | none | A text input field - this is the default |  {{name}}, {{country:text}} |
 | area | none | A text area - default if the field name is 'body' | {{description:area}}, {{body}} |
 
+## Hotkeys
+Some hotkeys are defined:
+- Mod + enter: submit template
+- Mod + (1-9): jump to field
+- Ctrl + (1-9): select replacement string N
+
 
 # Changelog
 ## 0.1.6 (in development)
-##
-- Templates now loaded dynamically - no more restarts! (also: changed template folder selection to dropdown)
+- Templates now loaded dynamically - no more restarts! (also: changed template folder selection to dropdown,command for re-indexing)
 - Added a choice type, e.g. `{{suit:choice:hearts:spades:diamonds:clubs}}`
 - Note filenames are now generated from a template string, either in config, or in `template-filename` in the template. Defaults to `{{title}}`, but all template fields available.
 - Added multiple replacement text possibility - If an array is given for `template-replacement`, then these will all be options in the template dialog
-- Many UI tweaks
+- Many UI tweaks, fixed YAML parsing
 
 ## 0.1.5
 Big changes - completely refactored, new options, new fields, most defaults in settings, should be more responsive to template changes
