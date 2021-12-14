@@ -165,7 +165,7 @@ export default class TemplateHelper {
         try {
             const data = await this.vault.read(this.vault.getAbstractFileByPath(path) as TFile)
             const result = metadataParser(data)
-            return metadataParser(data)
+            return result
         } catch (error) {
             console.log("Couldn't read template file "+path, error)
         }
@@ -214,9 +214,11 @@ export default class TemplateHelper {
         for( const k in md ) {
             const v = md[k]
             if( typeof v === 'string' ) yamlBlock += `${k}: ${this.quoteYAML(v)}\n`
-            if( v instanceof Array ) {
+            else if( v instanceof Array ) {
                 yamlBlock += `${k}:\n`
                 v.forEach((x) =>  yamlBlock += `- ${this.quoteYAML(x)}\n`)
+            } else {
+                console.log("Unknown data",[k,v])
             }
         } 
         yamlBlock += "---\n" 
