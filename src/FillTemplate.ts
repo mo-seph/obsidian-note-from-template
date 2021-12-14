@@ -9,8 +9,7 @@ import { notDeepStrictEqual, strictEqual } from 'assert';
 import FromTemplatePlugin, { ReplacementOptions}  from './main';
 import { CreateType, ReplacementSpec, TemplateField } from './templates';
 import { settings } from 'cluster';
-
-
+import { DateTime } from "luxon";
 
 export class FillTemplate extends Modal {
 	plugin:FromTemplatePlugin
@@ -156,6 +155,16 @@ export class FillTemplate extends Modal {
 
         const id = field.id
         const inputType = field.inputType
+
+        /*
+         * Some fields don't need UI...
+         */
+        if( inputType === "currentdate") {
+            const fmt = field.args[0] || 'yyyy-MM-dd'
+            data[id] = DateTime.now().toFormat(fmt)
+            console.log(`Date ${data[id]} with ${fmt}`)
+            return
+        }
         // Create div and label
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
         
@@ -205,6 +214,7 @@ export class FillTemplate extends Modal {
             t.inputEl.size = 50
             element = t.inputEl
         }
+    
 
         if( element ) {
             if( index === 0 ) element.focus()
