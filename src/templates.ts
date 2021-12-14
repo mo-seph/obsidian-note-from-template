@@ -286,6 +286,8 @@ export default class TemplateHelper {
     the second declaration of the tag in the template has more info.
     */
     mergeField(current:TemplateField,additional:TemplateField) {
+        if( current.inputType === "text" ) current.inputType = additional.inputType
+        if( additional.args.length > current.args.length ) current.args = additional.args
         current.alternatives = current.alternatives.concat(additional.alternatives)
     }
 
