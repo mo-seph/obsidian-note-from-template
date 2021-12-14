@@ -94,6 +94,8 @@ Some hotkeys are defined:
 # Development
 Very open to collaboration - drop me a line or PR
 ## Changelog
+### 0.1.7 
+- Added `currentdate` field type
 ### 0.1.6 
 - Templates now loaded dynamically - no more restarts! (also: changed template folder selection to dropdown,command for re-indexing)
 - Added a choice type, e.g. `{{suit:choice:hearts:spades:diamonds:clubs}}`
