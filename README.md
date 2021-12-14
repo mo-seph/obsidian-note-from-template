@@ -39,6 +39,19 @@ This would
 # Details
 
 ## YAML Tags
+Templates can contain YAML tags that will be filed out in the same way as the rest of the template. So this will work as expected:
+```
+---
+organsiation: "{{organisation}}"
+---
+{{name}} works at {{organisation}}
+```
+
+In order to be proper YAML, values cannot start with `{` or they are treated as dictionaries, so make sure to use `organisation: "{{org}}"` rather than `organisation: {{org}}` in the frontmatter.
+
+
+## From Template YAML Tags 
+
 | Name | Value | Default |
 | ---- | ----- | ------- |
 | template-id | Unique ID for the template | Lowercase version of the base name |
