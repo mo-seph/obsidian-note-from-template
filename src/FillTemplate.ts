@@ -160,6 +160,8 @@ export class FillTemplate extends Modal {
          * Some fields don't need UI...
          */
         // Moved currentdate into fields that *do* need UI!
+        if(inputType === "currentTitle") return;
+        if(inputType === "currentPath") return;
   
         // Create div and label
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
