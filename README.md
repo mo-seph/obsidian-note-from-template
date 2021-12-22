@@ -82,7 +82,7 @@ template-replacement: "{{templateResult}}"
 | ---- | ----- | ------- | ---- |
 | text | none | A text input field - this is the default |  {{name}}, {{country:text}} |
 | area | none | A text area - default if the field name is 'body' | {{description:area}}, {{body}} |
-| currentdate | format | The current date, using the format in Luxon format (https://moment.github.io/luxon/#/formatting) (Moment.js shouldn't be used for new projects, dayjs doesn't play nicely with the build system) | {{now:currentdate:dd-MM-yyyy}} |
+| currentDate | format | The current date, using the format in Luxon format (https://moment.github.io/luxon/#/formatting) (Moment.js shouldn't be used for new projects, dayjs doesn't play nicely with the build system) | {{now:currentdate:dd-MM-yyyy}} |
 
 ## Non-field tags
 (experimental, in dev)

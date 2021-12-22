@@ -159,12 +159,8 @@ export class FillTemplate extends Modal {
         /*
          * Some fields don't need UI...
          */
-        if( inputType === "currentdate") {
-            const fmt = field.args[0] || 'yyyy-MM-dd'
-            data[id] = DateTime.now().toFormat(fmt)
-            console.log(`Date ${data[id]} with ${fmt}`)
-            return
-        }
+        // Moved currentdate into fields that *do* need UI!
+  
         // Create div and label
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
         
@@ -207,9 +203,17 @@ export class FillTemplate extends Modal {
             t.inputEl.addClass("from-template-control")
         }
         */
+        else if( inputType === "currentDate") {
+            const fmt = field.args[0] || 'yyyy-MM-dd'
+            const t = new TextComponent(controlEl)
+            .setValue(DateTime.now().toFormat(fmt))
+            .onChange((value) => data[id] = value)
+            t.inputEl.size = 50
+            element = t.inputEl
+        }
         else if( inputType === "text") {
             const t = new TextComponent(controlEl)
-            .setValue(data[id])
+            .setValue(data[id] || field.args.length ? field.args[0] : "")
             .onChange((value) => data[id] = value)
             t.inputEl.size = 50
             element = t.inputEl
