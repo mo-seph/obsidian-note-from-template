@@ -3,7 +3,7 @@ import { App, Editor, MarkdownView, Modal, normalizePath, Notice, Plugin, Plugin
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import metadataParser from 'markdown-yaml-metadata-parser'
-import { BaseModal } from './BaseModal';
+//import { BaseModal } from './BaseModal';
 import { FillTemplate } from './FillTemplate';
 import TemplateHelper, { CreateType, ReplacementSpec, ReplaceType, TemplateDefaults, TemplateIdentifier } from './templates';
 import { commands } from 'codemirror';
