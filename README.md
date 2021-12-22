@@ -84,6 +84,13 @@ template-replacement: "{{templateResult}}"
 | area | none | A text area - default if the field name is 'body' | {{description:area}}, {{body}} |
 | currentdate | format | The current date, using the format in Luxon format (https://moment.github.io/luxon/#/formatting) (Moment.js shouldn't be used for new projects, dayjs doesn't play nicely with the build system) | {{now:currentdate:dd-MM-yyyy}} |
 
+## Non-field tags
+(experimental, in dev)
+| Field | Description | Usage Example |
+| ----- | ----------- | ----- |
+| currentTitle | The title of the active note when the template was triggered | `parent: [[{currentTitle}]]` in frontmatter to create hierarchy |
+| currentPath | The path of the active note when the template was triggered |
+
 ## Hotkeys
 Some hotkeys are defined:
 - Mod + enter: submit template
@@ -95,7 +102,8 @@ Some hotkeys are defined:
 Very open to collaboration - drop me a line or PR
 ## Changelog
 ### 0.1.7 
-- Added `currentdate` field type
+- Added `currentdate` field type, e.g. `{{now:currentdate:dd-MM-yyyy}}`
+- Added `currentPath` and `currentTitle` field names, e.g. `[[{{currentTitle}}]]` to link back to current note
 ### 0.1.6 
 - Templates now loaded dynamically - no more restarts! (also: changed template folder selection to dropdown,command for re-indexing)
 - Added a choice type, e.g. `{{suit:choice:hearts:spades:diamonds:clubs}}`

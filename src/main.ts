@@ -1,4 +1,4 @@
-import { App, Editor, Modal, normalizePath, Notice, Plugin, PluginSettingTab, Setting, TextComponent, TFile, TFolder } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, normalizePath, Notice, Plugin, PluginSettingTab, Setting, TextComponent, TFile, TFolder } from 'obsidian';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
@@ -68,7 +68,7 @@ export default class FromTemplatePlugin extends Plugin {
 				const command = this.addCommand( {
 					id:ts.id,
 					name: ts.name,
-					editorCallback: async (editor, _ ) => { this.launchTemplate(editor,ts) }
+					editorCallback: async (editor, view ) => { this.launchTemplate(editor,view,ts) }
 					
 				});
 				this.addedCommands.push( command.id )
@@ -88,11 +88,13 @@ export default class FromTemplatePlugin extends Plugin {
 		} )
 	}
 
-	async launchTemplate(editor:Editor,ts:TemplateIdentifier) {
+	async launchTemplate(editor:Editor,view:MarkdownView, ts:TemplateIdentifier) {
 		// Get the template text and the fields to fill in
 		const template = await this.templates.prepareTemplate(
 			ts,this.settings,editor.getSelection(),this.settings.inputSplit)
-
+		// Can we fill in extra information here?
+		template.data['currentTitle'] = view.file.basename
+		template.data['currentPath'] = view.file.path
 		const options:ReplacementOptions = {
 			editor:editor,
 			shouldReplaceSelection:template.settings.shouldReplaceInput,
