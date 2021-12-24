@@ -90,6 +90,7 @@ export default class TemplateHelper {
     */
     async fillOutTemplate(spec:ReplacementSpec) : Promise<[string,string,string]> {
 
+        //console.log("Data after filling out template",spec.data)
 		//Copy data across to all the alternative formulations of a field
 		spec.settings.fields.forEach( f => {
 			f.alternatives.forEach( a => spec.data[a] = spec.data[f.id])
@@ -188,8 +189,9 @@ export default class TemplateHelper {
                 shouldCreateOpen:metadata['template-should-create'] || defaults.createOpen,
                 templateFilename:metadata['template-filename'] || defaults.templateFilename,
                 templateBody : body,
-                fields : this.getTemplateFields(body)
+                fields : this.getTemplateFields(body,metadata)
             }
+            //console.log("Fields:",tmpl.fields)
             return tmpl
         } 
     }
@@ -231,7 +233,7 @@ export default class TemplateHelper {
 
 
     // Pull out the tags that Mustache finds and turn them into TemplateFields ready for use
-    getTemplateFields(template:string): TemplateField[] {
+    getTemplateFields(template:string,metadata:Record<string,any>): TemplateField[] {
         // Returns tuples of type ["name","<tag>"] - maybe other types...
         //const templateFields: Array<Array<any>> = Mustache.parse(template);
         const templateFields: string[][] = Mustache.parse(template);

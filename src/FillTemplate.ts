@@ -25,8 +25,8 @@ export class FillTemplate extends Modal {
 	async onOpen() {
 		let {contentEl} = this;
 
+        //console.log("Data before filling out template",this.result.data)
 		//Create the top of the interface - header and input for Title of the new note
-   
 
 		this.titleEl.createEl('h4', { text: "Create from Template"});
 
@@ -207,8 +207,10 @@ export class FillTemplate extends Modal {
         */
         else if( inputType === "currentDate") {
             const fmt = field.args[0] || 'yyyy-MM-dd'
+            const cur = DateTime.now().toFormat(fmt)
+            data[id] = cur
             const t = new TextComponent(controlEl)
-            .setValue(DateTime.now().toFormat(fmt))
+            .setValue(cur)
             .onChange((value) => data[id] = value)
             t.inputEl.size = 50
             element = t.inputEl
