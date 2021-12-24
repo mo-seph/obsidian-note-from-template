@@ -112,28 +112,33 @@ export default class FromTemplatePlugin extends Plugin {
 		console.log(spec)
 		console.log(options)
 
-
-		let createFailed = false
+		// First try to make the file
+		let newFile = null
 		if( options.shouldCreateOpen !== "none" ) {
-			createFailed = true
 			const path =spec.settings.outputDirectory + "/" + filename + ".md" 
 			try {
-				const newFile = await this.app.vault.create(path, filledTemplate)
-				if( options.shouldCreateOpen === "open") {
-					this.app.workspace.activeLeaf.openFile(newFile)
-				} 
-				else if( options.shouldCreateOpen === "open-pane") {
-					this.app.workspace.splitActiveLeaf().openFile(newFile)
-				}
-				createFailed = false
+				newFile = await this.app.vault.create(path, filledTemplate)
 			} catch (error) {
 				alert("Couldn't create file: " + filename + "\n" + error.toString() )
 			}
 		}
-		if( options.willReplaceSelection && !createFailed ) {
+
+		// Then see if we replace text in the editor
+		//console.log(`Will replace: ${options.willReplaceSelection}, new file: ${newFile}`)
+		if( options.willReplaceSelection && newFile ) {
 			options.editor.replaceRange(replaceText,
 				options.editor.getCursor("from"), options.editor.getCursor("to"));
 		}
+
+		// Then see if we should open the new file
+
+		if( options.shouldCreateOpen === "open" && newFile ) {
+			this.app.workspace.activeLeaf.openFile(newFile)
+		} 
+		else if( options.shouldCreateOpen === "open-pane" && newFile ) {
+			this.app.workspace.splitActiveLeaf().openFile(newFile)
+		}
+
 	}
 
 	
