@@ -31,6 +31,7 @@ export class FillTemplate extends Modal {
 		this.titleEl.createEl('h4', { text: "Create from Template"});
 
         //Create each of the fields
+        //console.log("Fields",this.result.settings.fields)
         this.result.settings.fields.forEach( (f,i) => {
             this.createInput(contentEl,this.result.data,f,i)
         })
@@ -169,6 +170,8 @@ export class FillTemplate extends Modal {
 		const labelText = index < 9 ? `${ucFirst(id)} (${index+1}): ` : `${ucFirst(id)}: `;
 		const label = controlEl.createEl("label", {text: labelText, cls:"from-template-label"})
 		label.htmlFor = id
+
+        //console.log(`Creating field with initial: '${initial}'`,field)
          
         //Put the data into the record to start
         if( initial) data[field.id] = initial;
@@ -216,8 +219,10 @@ export class FillTemplate extends Modal {
             element = t.inputEl
         }
         else if( inputType === "text") {
+            const initial = data[id] || (field.args.length ? field.args[0] : "")
+            //console.log("Initial: ", initial)
             const t = new TextComponent(controlEl)
-            .setValue(data[id] || field.args.length ? field.args[0] : "")
+            .setValue(initial)
             .onChange((value) => data[id] = value)
             t.inputEl.size = 50
             element = t.inputEl
