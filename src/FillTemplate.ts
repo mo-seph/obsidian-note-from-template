@@ -24,6 +24,7 @@ export class FillTemplate extends Modal {
 
 	async onOpen() {
 		let {contentEl} = this;
+        this.modalEl.addClass("from-template-modal")
 
         //console.log("Data before filling out template",this.result.data)
 		//Create the top of the interface - header and input for Title of the new note

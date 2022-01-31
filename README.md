@@ -101,6 +101,9 @@ Some hotkeys are defined:
 # Development
 Very open to collaboration - drop me a line or PR
 ## Changelog
+### Dev
+- Added CSS class to modal for styling
+
 ### 0.1.7 
 - Added `currentdate` field type, e.g. `{{now:currentdate:dd-MM-yyyy}}`
 - Added `currentPath` and `currentTitle` field names, e.g. `[[{{currentTitle}}]]` to link back to current note
