@@ -103,6 +103,7 @@ Very open to collaboration - drop me a line or PR
 ## Changelog
 ### Dev
 - Added CSS class to modal for styling
+- Added `multi` field type to allow a multi-select with toggles
 
 ### 0.1.7 
 - Added `currentdate` field type, e.g. `{{now:currentdate:dd-MM-yyyy}}`
