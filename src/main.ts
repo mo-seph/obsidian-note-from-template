@@ -114,10 +114,13 @@ export default class FromTemplatePlugin extends Plugin {
 
 		// First try to make the file
 		let newFile = null
+		let fileOK = true // Will be false if file creation failed, true if it succeded or was not requested
 		if( options.shouldCreateOpen !== "none" ) {
 			const path =spec.settings.outputDirectory + "/" + filename + ".md" 
 			try {
-				newFile = await this.app.vault.create(path, filledTemplate)
+				fileOK = false
+				const file = await this.app.vault.create(path, filledTemplate)
+				fileOK = true
 			} catch (error) {
 				alert("Couldn't create file: " + filename + "\n" + error.toString() )
 			}
@@ -125,7 +128,7 @@ export default class FromTemplatePlugin extends Plugin {
 
 		// Then see if we replace text in the editor
 		//console.log(`Will replace: ${options.willReplaceSelection}, new file: ${newFile}`)
-		if( options.willReplaceSelection && newFile ) {
+		if( options.willReplaceSelection && fileOK ) {
 			options.editor.replaceRange(replaceText,
 				options.editor.getCursor("from"), options.editor.getCursor("to"));
 		}
