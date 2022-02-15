@@ -10,6 +10,14 @@
 .from-template-label {
     font-size:large;
     vertical-align: top;
+    display: inline-block;
+    max-width:100pt;
+    padding-right:3pt;
+}
+
+.from-template-description {
+    font-size:small;
+    color: var(--text-muted);
 }
 
 .from-template-control {
@@ -19,7 +27,10 @@
     display: inline-block;
 }
 
-
+.from-template-section-sep {
+    margin-top:0;
+    margin-bottom:0;
+}
 
 .from-template-section {
     padding: 6pt;

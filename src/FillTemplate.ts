@@ -42,6 +42,7 @@ export class FillTemplate extends Modal {
             sc.createSpan({text: `${title}:`,cls:"from-template-sublabel"}) 
             return sc.createSpan({text: `${content}`,cls:["from-template-subcontrol",...cls]}) 
         }
+        contentEl.createEl("hr",{cls:"from-template-section-sep"})
 
         // An info box...
         makeSubcontrol(contentEl,"Template",`${this.result.templateID.name}`)
@@ -169,7 +170,8 @@ export class FillTemplate extends Modal {
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
         
 		const labelText = index < 9 ? `${ucFirst(id)} (${index+1}): ` : `${ucFirst(id)}: `;
-		const label = controlEl.createEl("label", {text: labelText, cls:"from-template-label"})
+		const labelContainer = controlEl.createEl("div", {cls:"from-template-label"})
+		const label = labelContainer.createEl("label", {text: labelText})
 		label.htmlFor = id
 
         //console.log(`Creating field with initial: '${initial}'`,field)
@@ -180,11 +182,26 @@ export class FillTemplate extends Modal {
         let element:HTMLElement
 
         if(inputType === "area") {
+            console.log(field)
             const t = new TextAreaComponent(controlEl)
             .setValue(data[id])
             .onChange((value) => data[id] = value)
             t.inputEl.rows = 5;
             element = t.inputEl
+            if( field.args[0] && field.args[0].length ) 
+                labelContainer.createEl("div", {text: field.args[0], cls:"from-template-description"})
+        }
+        else if( inputType === "text") {
+            const initial = data[id] || (field.args.length ? field.args[0] : "")
+            console.log(field)
+            //console.log("Initial: ", initial)
+            const t = new TextComponent(controlEl)
+            .setValue(initial)
+            .onChange((value) => data[id] = value)
+            t.inputEl.size = 50
+            element = t.inputEl
+            if( field.args[1] && field.args[1].length )
+                labelContainer.createEl("div", {text: field.args[1], cls:"from-template-description"})
         }
         else if( inputType === "choice") {
             const opts: Record<string,string> = {}
@@ -234,16 +251,7 @@ export class FillTemplate extends Modal {
             t.inputEl.size = 50
             element = t.inputEl
         }
-        else if( inputType === "text") {
-            const initial = data[id] || (field.args.length ? field.args[0] : "")
-            //console.log("Initial: ", initial)
-            const t = new TextComponent(controlEl)
-            .setValue(initial)
-            .onChange((value) => data[id] = value)
-            t.inputEl.size = 50
-            element = t.inputEl
-        }
-    
+
 
         if( element ) {
             if( index === 0 ) element.focus()
