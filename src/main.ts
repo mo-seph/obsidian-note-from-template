@@ -119,7 +119,7 @@ export default class FromTemplatePlugin extends Plugin {
 			const path =spec.settings.outputDirectory + "/" + filename + ".md" 
 			try {
 				fileOK = false
-				const file = await this.app.vault.create(path, filledTemplate)
+				newFile = await this.app.vault.create(path, filledTemplate)
 				fileOK = true
 			} catch (error) {
 				alert("Couldn't create file: " + filename + "\n" + error.toString() )
