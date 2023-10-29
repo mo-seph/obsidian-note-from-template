@@ -194,7 +194,6 @@ class FromTemplateSettingTab extends PluginSettingTab {
 		const updateFolderDescription = (folder:string) => {
 			try {
 			let [text,clss,r_clss] = this.getDirectoryText(folder)
-			dirSetting.setDesc(text)
 			dirSetting.descEl.addClass(clss)
 			dirSetting.descEl.removeClass(r_clss)
 			} catch (error) {

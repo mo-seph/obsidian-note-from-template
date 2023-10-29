@@ -7,7 +7,7 @@ import { tmpdir } from 'os';
 import { notDeepStrictEqual, strictEqual } from 'assert';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin, { ReplacementOptions}  from './main';
-import { CreateType, ReplacementSpec, TemplateField } from './templates';
+import { CreateType, ReplacementSpec, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT } from './templates';
 import { settings } from 'cluster';
 import { DateTime } from "luxon";
 
@@ -32,7 +32,7 @@ export class FillTemplate extends Modal {
 		this.titleEl.createEl('h4', { text: "Create from Template"});
 
         //Create each of the fields
-        //console.log("Fields",this.result.settings.fields)
+        console.log("Fields",this.result.settings.fields)
         this.result.settings.fields.forEach( (f,i) => {
             this.createInput(contentEl,this.result.data,f,i)
         })
@@ -202,6 +202,23 @@ export class FillTemplate extends Modal {
             element = t.inputEl
             if( field.args[1] && field.args[1].length )
                 labelContainer.createEl("div", {text: field.args[1], cls:"from-template-description"})
+        }
+        else if( inputType === "note-title") {
+            const initial = data[id] || (field.args.length ? field.args[0] : "") 
+            const initial_safe = initial.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")
+            console.log(field)
+            const error = controlEl.createEl("div", {text: "Error! Characters not allowed in filenames: "+BAD_CHARS_FOR_FILENAMES_TEXT, cls:"from-template-error-text"})
+            function updateError(v:string) { 
+                const OK = v.match(BAD_CHARS_FOR_FILENAMES_MATCH) ? false : true
+                if( OK ) error.setAttribute("hidden","true")
+                else error.removeAttribute("hidden")
+            }
+            updateError(initial_safe)
+            const t = new TextComponent(controlEl)
+            .setValue(initial_safe)
+            .onChange((value) => { data[id] = value; updateError(value) })
+            t.inputEl.size = 50
+            element = t.inputEl
         }
         else if( inputType === "choice") {
             const opts: Record<string,string> = {}

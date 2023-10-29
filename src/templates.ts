@@ -2,8 +2,13 @@
 import * as Mustache from 'mustache';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import metadataParser from 'markdown-yaml-metadata-parser'
-import { normalizePath, TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
+import { normalizePath, TAbstractFile, TFile, TFolder, Vault, stringifyYaml, parseYaml} from 'obsidian';
 import { defaultMaxListeners } from 'events';
+
+
+export const BAD_CHARS_FOR_FILENAMES_TEXT = ":[]?/\\"
+export const BAD_CHARS_FOR_FILENAMES_MATCH = /[:[\]?/\\]/g
+
 
 // Which are the YAML fields used by the template system
 const TEMPLATE_FIELDS = [
@@ -100,7 +105,8 @@ export default class TemplateHelper {
 		const filledTemplate = Mustache.render(spec.settings.templateBody,spec.data);
         spec.data['templateResult'] = metadataParser(filledTemplate).content
         const raw_filename = Mustache.render(spec.settings.templateFilename,spec.data)
-        const filename = normalizePath(raw_filename.replace(/[^a-zA-Z0-9 -:]/g,"")) //Quick and dirty regex for usable titles
+
+        const filename = normalizePath(raw_filename.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")) //Quick and dirty regex for usable titles
         spec.data['filename'] = filename
         const replaceText = Mustache.render(spec.replacementTemplate,spec.data)
         return [filledTemplate,replaceText,filename]
@@ -238,7 +244,7 @@ export default class TemplateHelper {
         //const templateFields: Array<Array<any>> = Mustache.parse(template);
         const templateFields: string[][] = Mustache.parse(template);
         
-        const titleField:TemplateField = {id:"title",inputType:"text",args:[],alternatives:[]}
+        const titleField:TemplateField = {id:"title",inputType:"note-title",args:[],alternatives:[]}
 
         const fields:TemplateField[] = [titleField]
 
