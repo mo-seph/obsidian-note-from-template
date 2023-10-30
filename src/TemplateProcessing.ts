@@ -4,7 +4,7 @@ import * as Mustache from 'mustache';
 import metadataParser from 'markdown-yaml-metadata-parser'
 import { normalizePath, TAbstractFile, TFile, TFolder, Vault, stringifyYaml, parseYaml} from 'obsidian';
 import { defaultMaxListeners } from 'events';
-import {ReplacementSpec, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, TemplateIdentifier, TemplateDefaults, TemplateSettings, TEMPLATE_FIELDS, TemplateField, TemplateFolderSpec} from './SharedInterfaces'
+import {ReplacementSpec, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, TemplateIdentifier, TemplateActionSettings, TemplateSettings, TEMPLATE_FIELDS, TemplateField } from './SharedInterfaces'
 
 
 
@@ -14,7 +14,7 @@ export default class TemplateProcessing {
         this.vault = vault;
     }
 
-       /*
+    /*
     Takes the replacement spec and creates:
     - a filled out version of the template body
     - a filled out version of the currently selected text in the editor
@@ -44,7 +44,7 @@ export default class TemplateProcessing {
      * - input text
      * - a delimiter to turn the input text into field values
      */
-    async prepareTemplate(ts:TemplateIdentifier,defaults:TemplateDefaults,input:string,delimiter:string="\\s+-\\s+") : Promise<ReplacementSpec> {
+    async prepareTemplate(ts:TemplateIdentifier,defaults:TemplateActionSettings,input:string,delimiter:string="\\s+-\\s+") : Promise<ReplacementSpec> {
 		const templateSettings = await this.getTemplateSettings(ts,defaults)
 		const fieldData = this.parseInput(input,templateSettings.inputFieldList,delimiter)
         return {
@@ -104,7 +104,7 @@ export default class TemplateProcessing {
         }
     }
 
-    async getTemplateSettings(ts:TemplateIdentifier,defaults:TemplateDefaults):Promise<TemplateSettings> {
+    async getTemplateSettings(ts:TemplateIdentifier,defaults:TemplateActionSettings):Promise<TemplateSettings> {
         const c = this.vault.getAbstractFileByPath(ts.path) as TFile
         if( c instanceof TFile ) {
 
@@ -242,4 +242,13 @@ export default class TemplateProcessing {
         console.log(result)
         return result
     }
+}
+
+/*
+ * Just produced in response to scanning for templates? Perhaps?
+ */
+export interface TemplateFolderSpec {
+    location:TFolder
+    depth:number
+    numTemplates:number
 }

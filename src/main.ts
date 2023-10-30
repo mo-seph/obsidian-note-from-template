@@ -1,14 +1,11 @@
-import { App, Editor, MarkdownView, Modal, normalizePath, Notice, Plugin, PluginSettingTab, Setting, TextComponent, TFile, TFolder } from 'obsidian';
+import {  Editor, MarkdownView,  Plugin  } from 'obsidian';
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
-// @ts-ignore - not sure how to build a proper typescript def yet
-import metadataParser from 'markdown-yaml-metadata-parser'
 //import { BaseModal } from './BaseModal';
 import { FillTemplate } from './FillTemplate';
-import { FromTemplateSettingTab } from './SettingsPane';
+import { FromTemplateSettingTab, FromTemplatePluginSettings, DEFAULT_SETTINGS } from './SettingsPane';
 import TemplateProcessing from './TemplateProcessing';
-import { CreateType, ReplacementSpec, ReplaceType, TemplateDefaults, TemplateIdentifier } from './SharedInterfaces';
-import { commands } from 'codemirror';
+import {  ReplacementSpec,  TemplateIdentifier, ReplacementOptions } from './SharedInterfaces';
 
 // Stop mustache from escaping HTML entities as we are generating Markdown
 Mustache.escape = function(text:string) {return text;};
@@ -19,31 +16,9 @@ Mustache.escape = function(text:string) {return text;};
  * - add a replacement string for what goes back into the text
  */
 
-interface FromTemplatePluginSettings extends TemplateDefaults {
-	templateDirectory: string;
-	inputSplit: string;
-	config: string;
-}
-
-const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
-	outputDirectory:"test",
-	templateFilename:"{{title}}",
-	inputFieldList:"title,body",
-	textReplacementTemplate:"[[{{title}}]]",
-	templateDirectory: 'templates',
-	replaceSelection: "always",
-	createOpen: "create",
-	inputSplit: "\\s+-\\s+",
-	config: '[]'
-}
 
 
-export interface ReplacementOptions {
-	editor:Editor;
-	shouldReplaceSelection:ReplaceType
-	shouldCreateOpen:CreateType
-	willReplaceSelection:boolean;
-}
+
 
 export default class FromTemplatePlugin extends Plugin {
 	settings: FromTemplatePluginSettings;

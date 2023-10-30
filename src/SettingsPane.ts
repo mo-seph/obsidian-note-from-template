@@ -1,8 +1,25 @@
 
 import { App, MarkdownView, Modal, normalizePath, Notice, Plugin, PluginSettingTab, Setting, TextComponent, TFile, TFolder } from 'obsidian';
 import FromTemplatePlugin from "./main"
-import  { CreateType,  ReplaceType} from './SharedInterfaces';
+import  { CreateType,  ReplaceType, TemplateActionSettings } from './SharedInterfaces';
 
+export interface FromTemplatePluginSettings extends TemplateActionSettings {
+	templateDirectory: string;
+	inputSplit: string;
+	config: string;
+}
+
+export const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
+	outputDirectory:"test",
+	templateFilename:"{{title}}",
+	inputFieldList:"title,body",
+	textReplacementTemplate:"[[{{title}}]]",
+	templateDirectory: 'templates',
+	replaceSelection: "always",
+	createOpen: "create",
+	inputSplit: "\\s+-\\s+",
+	config: '[]'
+}
 
 export class FromTemplateSettingTab extends PluginSettingTab {
 	plugin: FromTemplatePlugin;
