@@ -7,7 +7,7 @@ import { tmpdir } from 'os';
 import { notDeepStrictEqual, strictEqual } from 'assert';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin, { ReplacementOptions}  from './main';
-import { CreateType, ReplacementSpec, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT } from './templates';
+import { CreateType, ReplacementSpec, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT } from './SharedInterfaces';
 import { settings } from 'cluster';
 import { DateTime } from "luxon";
 
