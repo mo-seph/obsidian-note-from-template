@@ -7,15 +7,15 @@ import { tmpdir } from 'os';
 import { notDeepStrictEqual, strictEqual } from 'assert';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin  from './main';
-import { CreateType, ReplacementSpec, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, ReplacementOptions } from './SharedInterfaces';
+import { CreateType, ActiveTemplate, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, ReplacementOptions } from './SharedInterfaces';
 import { settings } from 'cluster';
 import { DateTime } from "luxon";
 
-export class FillTemplate extends Modal {
+export class TemplateInputUI extends Modal {
 	plugin:FromTemplatePlugin
-	result:ReplacementSpec
+	result:ActiveTemplate
 	options:ReplacementOptions
-	constructor(app: App,plugin:FromTemplatePlugin,spec:ReplacementSpec, options:ReplacementOptions ) {
+	constructor(app: App,plugin:FromTemplatePlugin,spec:ActiveTemplate, options:ReplacementOptions ) {
 		super(app);
         this.result = spec
 		this.plugin = plugin;
@@ -32,8 +32,8 @@ export class FillTemplate extends Modal {
 		this.titleEl.createEl('h4', { text: "Create from Template"});
 
         //Create each of the fields
-        console.log("Fields",this.result.settings.fields)
-        this.result.settings.fields.forEach( (f,i) => {
+        console.log("Fields",this.result.template.fields)
+        this.result.template.fields.forEach( (f,i) => {
             this.createInput(contentEl,this.result.data,f,i)
         })
 
@@ -47,7 +47,7 @@ export class FillTemplate extends Modal {
         // An info box...
         makeSubcontrol(contentEl,"Template",`${this.result.templateID.name}`)
         makeSubcontrol(contentEl,"Destination",
-            `${this.result.settings.outputDirectory}/${this.result.settings.templateFilename}.md`,
+            `${this.result.template.outputDirectory}/${this.result.template.templateFilename}.md`,
             ["from-template-code-span"]
             )
 
@@ -66,13 +66,13 @@ export class FillTemplate extends Modal {
         }
         this.options.willReplaceSelection = willReplace()
 
-        const fieldNames = this.result.settings.fields.map(f => f.id)
+        const fieldNames = this.result.template.fields.map(f => f.id)
         fieldNames.push("templateResult")
      
         let replacementText: TextComponent;
         const setReplaceText = (r:string) => {
             replacementText.setValue(r)
-            this.result.replacementTemplate = r
+            this.result.textReplacementString = r
         }
         const replaceSetting = new Setting(contentEl)
         .setName("Replace selected text")
@@ -88,9 +88,9 @@ export class FillTemplate extends Modal {
         //const repDiv = contentEl.createEl("div", {text: "Replacement: ", cls:"setting-item-description"})
         const repDiv = makeSubcontrol(contentEl,"Replacement")
         replacementText = new TextComponent(repDiv)
-            .setValue(this.result.replacementTemplate)
+            .setValue(this.result.textReplacementString)
             .onChange((value) => {
-                this.result.replacementTemplate =  value
+                this.result.textReplacementString =  value
             })
             .setDisabled(!willReplace());
         //replacementText.inputEl.size = 60
@@ -108,7 +108,7 @@ export class FillTemplate extends Modal {
         // Create buttons for the alternative replacements
         const alternatives = makeSubcontrol(contentEl,"Replacements")
         //const alternatives = contentEl.createEl("div", { text: `Replacements:`, cls:["setting-item-description","from-template-command-list"]})
-        this.result.settings.textReplacementTemplates.forEach( (r,i) => {
+        this.result.template.textReplacementTemplates.forEach( (r,i) => {
             const el = new ButtonComponent(alternatives)
                 .setButtonText(`${i+1}: ${r}`).onClick((e) => setReplaceText(r)).buttonEl
             el.addClass("from-template-inline-code-button")
@@ -206,6 +206,7 @@ export class FillTemplate extends Modal {
         else if( inputType === "note-title") {
             const initial = data[id] || (field.args.length ? field.args[0] : "") 
             const initial_safe = initial.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")
+            data[id] = initial_safe
             console.log(field)
             const error = controlEl.createEl("div", {text: "Error! Characters not allowed in filenames: "+BAD_CHARS_FOR_FILENAMES_TEXT, cls:"from-template-error-text"})
             function updateError(v:string) { 

@@ -1,24 +1,8 @@
 import {  Editor, MarkdownView,  Plugin  } from 'obsidian';
-// @ts-ignore - not sure how to build a proper typescript def yet
-import * as Mustache from 'mustache';
-//import { BaseModal } from './BaseModal';
-import { FillTemplate } from './FillTemplate';
+import { TemplateInputUI } from './TemplateInputUI';
 import { FromTemplateSettingTab, FromTemplatePluginSettings, DEFAULT_SETTINGS } from './SettingsPane';
 import TemplateProcessing from './TemplateProcessing';
-import {  ReplacementSpec,  TemplateIdentifier, ReplacementOptions } from './SharedInterfaces';
-
-// Stop mustache from escaping HTML entities as we are generating Markdown
-Mustache.escape = function(text:string) {return text;};
-
-/*
- * TODOs:
- * - figure out why textareas are not working qute right
- * - add a replacement string for what goes back into the text
- */
-
-
-
-
+import {  ActiveTemplate,  TemplateIdentifier, ReplacementOptions } from './SharedInterfaces';
 
 export default class FromTemplatePlugin extends Plugin {
 	settings: FromTemplatePluginSettings;
@@ -37,7 +21,7 @@ export default class FromTemplatePlugin extends Plugin {
 	// Adds all the template commands - calls getTemplates which looks for files in the settings.templateDirectory
 	async indexTemplates() {
 		this.clearTemplateCommands()
-		const templates = await this.templates.getTemplates(this.settings.templateDirectory) || []
+		const templates = await this.templates.getTemplateIdentifiersFromDirectory(this.settings.templateDirectory) || []
 		console.log("Got templates: ",templates.map(c => c.path).join(", "))
 		templates.forEach(async t => {
 			if( t ) {
@@ -74,39 +58,42 @@ export default class FromTemplatePlugin extends Plugin {
 		template.data['currentPath'] = view.file.path
 		const options:ReplacementOptions = {
 			editor:editor,
-			shouldReplaceSelection:template.settings.shouldReplaceInput,
-			shouldCreateOpen:template.settings.shouldCreateOpen,
+			shouldReplaceSelection:template.template.replaceSelection,
+			shouldCreateOpen:template.template.createOpen,
 			willReplaceSelection:true,
 		}
 		//This class does all the UI work
-		new FillTemplate(this.app,this,template,options).open();
+		new TemplateInputUI(this.app,this,template,options).open();
 	}
 
 
-	async templateFilled(spec:ReplacementSpec,options:ReplacementOptions) {
-		let [filledTemplate,replaceText,filename] = await this.templates.fillOutTemplate(spec)
+	async templateFilled(spec:ActiveTemplate,options:ReplacementOptions) {
+		let result = await spec.template.fillOutTemplate(spec)
 
-		console.log(spec)
-		console.log(options)
+		console.log("Active: ",spec)
+		console.log("Options: ",options)
+		console.log("Result: ",result)
+
+		return;
 
 		// First try to make the file
 		let newFile = null
 		let fileOK = true // Will be false if file creation failed, true if it succeded or was not requested
 		if( options.shouldCreateOpen !== "none" ) {
-			const path =spec.settings.outputDirectory + "/" + filename + ".md" 
+			const path =spec.template.outputDirectory + "/" + result.filename + ".md" 
 			try {
 				fileOK = false
-				const file = await this.app.vault.create(path, filledTemplate)
+				const file = await this.app.vault.create(path, result.note)
 				fileOK = true
 			} catch (error) {
-				alert("Couldn't create file: " + filename + "\n" + error.toString() )
+				alert("Couldn't create file: " + result.filename + "\n" + error.toString() )
 			}
 		}
 
 		// Then see if we replace text in the editor
 		//console.log(`Will replace: ${options.willReplaceSelection}, new file: ${newFile}`)
 		if( options.willReplaceSelection && fileOK ) {
-			options.editor.replaceRange(replaceText,
+			options.editor.replaceRange(result.replacementText,
 				options.editor.getCursor("from"), options.editor.getCursor("to"));
 		}
 

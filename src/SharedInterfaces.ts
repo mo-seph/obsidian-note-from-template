@@ -1,5 +1,5 @@
 import {  TFolder, Editor } from 'obsidian';
-
+import { FullTemplate } from './Template';
 /*
  * This file contains common objects used by the whole templating system
  */
@@ -48,22 +48,6 @@ export interface TemplateIdentifier {
 	path: string; //Path of the template file
 }
 
-/*
- * Details about the template - read in every time the template is applied 
- * so that edits are reflected immediately
- * TODO: should this inherit from TemplateActionSettings?
- */
-export interface TemplateSettings {
-    shouldReplaceInput: ReplaceType
-    shouldCreateOpen: CreateType;
-	outputDirectory: string; //Output directory for notes generated from the template
-	inputFieldList: string; //Fields to pull out of the input
-	textReplacementTemplates: string[]; //A template string for the text that will be inserted in the editor
-	templateFilename: string; //A template string for the text that will be inserted in the editor
-
-    templateBody:string;
-	fields:TemplateField[]; //Specifications for all of the fields in the template
-}
 
 /*
  * Settings for what the template should do when activated
@@ -74,8 +58,17 @@ export interface TemplateActionSettings {
 	createOpen: CreateType
     outputDirectory:string
     inputFieldList:string
-    textReplacementTemplate:string
+    textReplacementTemplates:string[]
     templateFilename:string
+}
+
+/*
+ * What we get when we fill out a template
+ */
+export interface TemplateResult {
+    note:string; // The full text of the note including Properties/YAML
+    replacementText:string; // The text to replace selected text in the editor with
+    filename:string; // The final filename to make the note with
 }
 
 /*
@@ -92,12 +85,20 @@ export interface TemplateField {
 /*
  * All of the information required to fill out a template with data
  */
-export interface ReplacementSpec {
+export interface ActiveTemplate {
 	input:string; // The currently selected text in the editor
 	templateID:TemplateIdentifier; //Keep hold of the template ID just in case
-    settings:TemplateSettings; //All the settings of the template
-    replacementTemplate:string // The chosen template for replacing selected editor text
+    template:FullTemplate; //All the settings of the template
+    textReplacementString:string // The (template) string for replacing selected editor text
 	data:Record<string,string>; //The data to fill in the template with
 }
 
 
+/*
+ * Just produced in response to scanning for templates? Perhaps?
+ */
+export interface TemplateFolderSpec {
+    location:TFolder
+    depth:number
+    numTemplates:number
+}

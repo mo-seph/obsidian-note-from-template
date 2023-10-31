@@ -1,10 +1,10 @@
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
-// @ts-ignore - not sure how to build a proper typescript def yet
-import metadataParser from 'markdown-yaml-metadata-parser'
 import { normalizePath, TAbstractFile, TFile, TFolder, Vault, stringifyYaml, parseYaml} from 'obsidian';
 import { defaultMaxListeners } from 'events';
-import {ReplacementSpec, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, TemplateIdentifier, TemplateActionSettings, TemplateSettings, TEMPLATE_FIELDS, TemplateField } from './SharedInterfaces'
+import {BAD_CHARS_FOR_FILENAMES_MATCH,  TemplateIdentifier, TemplateActionSettings,  TEMPLATE_FIELDS, TemplateField, ActiveTemplate, TemplateResult } from './SharedInterfaces'
+import { FullTemplate } from './Template';
+
 
 
 
@@ -15,28 +15,17 @@ export default class TemplateProcessing {
     }
 
     /*
-    Takes the replacement spec and creates:
-    - a filled out version of the template body
-    - a filled out version of the currently selected text in the editor
-    */
-    async fillOutTemplate(spec:ReplacementSpec) : Promise<[string,string,string]> {
-
-        //console.log("Data after filling out template",spec.data)
-		//Copy data across to all the alternative formulations of a field
-		spec.settings.fields.forEach( f => {
-			f.alternatives.forEach( a => spec.data[a] = spec.data[f.id])
-		})
-		
-		//const template = await this.loadTemplate(spec.template);
-		const filledTemplate = Mustache.render(spec.settings.templateBody,spec.data);
-        spec.data['templateResult'] = metadataParser(filledTemplate).content
-        const raw_filename = Mustache.render(spec.settings.templateFilename,spec.data)
-
-        const filename = normalizePath(raw_filename.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")) //Quick and dirty regex for usable titles
-        spec.data['filename'] = filename
-        const replaceText = Mustache.render(spec.replacementTemplate,spec.data)
-        return [filledTemplate,replaceText,filename]
+     * Loads a template from the vault, and sets up default values as necessary
+     */
+    async loadTemplate(ts:TemplateIdentifier,defaults:TemplateActionSettings):Promise<FullTemplate> {
+        const c = this.vault.getAbstractFileByPath(ts.path) as TFile
+        if( c instanceof TFile ) {
+            const data = await this.noteToTemplateData(ts.path)
+            return new FullTemplate(data.body, data.template_settings, data.frontmatter, defaults)
+        } 
     }
+
+ 
 
     /*
      * Sets a template up for use. Requires:
@@ -44,14 +33,17 @@ export default class TemplateProcessing {
      * - input text
      * - a delimiter to turn the input text into field values
      */
-    async prepareTemplate(ts:TemplateIdentifier,defaults:TemplateActionSettings,input:string,delimiter:string="\\s+-\\s+") : Promise<ReplacementSpec> {
-		const templateSettings = await this.getTemplateSettings(ts,defaults)
-		const fieldData = this.parseInput(input,templateSettings.inputFieldList,delimiter)
+    async prepareTemplate(ts:TemplateIdentifier,defaults:TemplateActionSettings,input:string,delimiter:string="\\s+-\\s+") : Promise<ActiveTemplate> {
+        console.log("Getting template ready...",ts)
+		const template = await this.loadTemplate(ts,defaults)
+        console.log("Got template: ",template)
+        console.log("Splitting input: ",input, template.inputFieldList, delimiter)
+		const fieldData = this.parseInput(input,template.inputFieldList,delimiter)
         return {
+			template:template,
             input:input,
 			templateID:ts,
-			settings:templateSettings,
-            replacementTemplate:templateSettings.textReplacementTemplates[0],
+            textReplacementString:template.textReplacementTemplates[0],
 			data:fieldData,
 		}
     }
@@ -61,7 +53,7 @@ export default class TemplateProcessing {
      * Returns all the templates in a directory
      * Run through the settings directory and return an TemplateSettings for each valid file there
      */
-	async getTemplates(directory:string) : Promise<TemplateIdentifier[]>  {
+	async getTemplateIdentifiersFromDirectory(directory:string) : Promise<TemplateIdentifier[]>  {
 		const templateFolder:TFolder = this.vault.getAbstractFileByPath(directory) as TFolder
 		if( ! templateFolder ) return Promise.all([])
         const children = templateFolder.children
@@ -74,7 +66,7 @@ export default class TemplateProcessing {
     async getTemplateIdentifier(c:TFile) {
         try {
 
-        const metadata = (await this.readMetadata(c.path) ).metadata
+        const metadata = (await this.noteToTemplateData(c.path) ).template_settings
         const fn = c.basename
         const tmpl:TemplateIdentifier = {
             id:metadata['template-id'] || fn.toLowerCase(),
@@ -92,111 +84,35 @@ export default class TemplateProcessing {
         }
     }
 
-
-    // Gets the YAML metadata for the given template path
-    async readMetadata(path:string) {
-        try {
-            const data = await this.vault.read(this.vault.getAbstractFileByPath(path) as TFile)
-            const result = metadataParser(data)
-            return result
-        } catch (error) {
-            console.log("Couldn't read template file "+path, error)
-        }
-    }
-
-    async getTemplateSettings(ts:TemplateIdentifier,defaults:TemplateActionSettings):Promise<TemplateSettings> {
-        const c = this.vault.getAbstractFileByPath(ts.path) as TFile
-        if( c instanceof TFile ) {
-
-            const template_data = await this.readMetadata(ts.path)
-            if(! template_data ) return new Promise(null)
-            const metadata = template_data.metadata
-            const body = this.removeExtraYAML(metadata, template_data.content,TEMPLATE_FIELDS)
-
-            const tmpl:TemplateSettings = {
-                outputDirectory:metadata['template-output'] || defaults.outputDirectory,
-                inputFieldList:metadata['template-input'] || defaults.inputFieldList,
-                textReplacementTemplates:this.ensureArray( metadata['template-replacement'], defaults.textReplacementTemplate ),
-                shouldReplaceInput:metadata['template-should-replace'] || defaults.replaceSelection,
-                shouldCreateOpen:metadata['template-should-create'] || defaults.createOpen,
-                templateFilename:metadata['template-filename'] || defaults.templateFilename,
-                templateBody : body,
-                fields : this.getTemplateFields(body,metadata)
-            }
-            //console.log("Fields:",tmpl.fields)
-            return tmpl
-        } 
-    }
-
-    ensureArray(a:any,backup:string=null) : string[] {
-        const backupValue = backup ? [backup] : []
-        if( !a ) return backupValue
-        if( a instanceof Array ) return a
-        if( typeof a === "string" ) return [a]
-        return backupValue
-    }
-
     /*
-     * Strips out any of the YAML tags given in TEMPLATE_FIELDs from the template, and 
-     * sticks it back together. Unfortuantely, doesn't guarantee order of fields,
-     * and the status of quotes is a bit wobbly
+     * Reads in a markdown note file from the Vault, and returns:
+     * - the body of the note
+     * - a Record of the YAML frontmatter for the destination note
+     * - a Record of the YAML that holds template settings and should not go into the destination note
      */
-    removeExtraYAML(metadata:Record<string,any>,body:string,fields:string[]=TEMPLATE_FIELDS) : string {
-        const md = {...metadata}
-        fields.forEach(f => delete md[f])
-        let yamlBlock = "---\n"
-        for( const k in md ) {
-            const v = md[k]
-            if( typeof v === 'string' ) yamlBlock += `${k}: ${this.quoteYAML(v)}\n`
-            else if( v instanceof Array ) {
-                yamlBlock += `${k}:\n`
-                v.forEach((x) =>  yamlBlock += `- ${this.quoteYAML(x)}\n`)
-            } else {
-                console.log("Unknown data",[k,v])
+    async noteToTemplateData(path:string) {
+        const data = await this.vault.read(this.vault.getAbstractFileByPath(path) as TFile)
+        const fm_match = /---(.*)---(.*)$/sm
+        console.log("Data: ",data)
+        const m = data.match(fm_match)
+
+        if( m ) {
+            const fm = m[1];
+            const body = m[2];
+            const props:Record<string,any> = {}
+            const temp_props:Record<string,any> = {}
+            const fmy:Record<string,any> = parseYaml(fm)
+            for( const key in fmy ) {
+                if( TEMPLATE_FIELDS.contains (key) ) temp_props[key] = fmy[key]
+                else props[key] = fmy[key]
+            };
+            return {
+                body: body,
+                frontmatter: props,
+                template_settings:temp_props
             }
-        } 
-        yamlBlock += "---\n" 
-        return yamlBlock + body
-    }
-    //Quote YAML values if necessary - not implemented
-    quoteYAML(s:string) : string {
-        return s
-    }
-
-
-    // Pull out the tags that Mustache finds and turn them into TemplateFields ready for use
-    getTemplateFields(template:string,metadata:Record<string,any>): TemplateField[] {
-        // Returns tuples of type ["name","<tag>"] - maybe other types...
-        //const templateFields: Array<Array<any>> = Mustache.parse(template);
-        const templateFields: string[][] = Mustache.parse(template);
-        
-        const titleField:TemplateField = {id:"title",inputType:"note-title",args:[],alternatives:[]}
-
-        const fields:TemplateField[] = [titleField]
-
-        templateFields.forEach( r => {
-            if( r[0] === "name" ) {
-                const field = this.parseField(r[1])
-                const existing = fields.find((t)=> t.id === field.id )
-                if( existing ) { this.mergeField(existing,field)}
-                else fields.push(field)
-            }
-        } )
-        return fields
-    }
-
-    // Parse an individual tag name into a TemplateField
-    // Allows tags to be named e.g. {{title:text}}, or {{info:dropdown:a:b:c:}}
-    // and turned into something useful
-    parseField(input:string) : TemplateField {
-        const parts = input.split(":");
-        const id = parts[0] || input;
-        return {
-            id: id,
-            inputType: parts[1] || ( id === "body" ? "area" : "text" ),
-            args: parts.slice(2),
-            alternatives: input === id ? [] : [input]
         }
+        return {body:data, frontmatter:{}, template_settings:{}}
     }
 
     /* 
@@ -214,16 +130,7 @@ export default class TemplateProcessing {
         return r
     }
 
-    /*
-    Combines one TemplateField with another. Currently just adds the alternative manifestations,
-    e.g. '{{body}}' and '{{body:text}}', but might want to be more clever in the future in case
-    the second declaration of the tag in the template has more info.
-    */
-    mergeField(current:TemplateField,additional:TemplateField) {
-        if( current.inputType === "text" ) current.inputType = additional.inputType
-        if( additional.args.length > current.args.length ) current.args = additional.args
-        current.alternatives = current.alternatives.concat(additional.alternatives)
-    }
+
 
     countTemplates(folder:string) : number | undefined {
 		const templateFolder:TFolder = this.vault.getAbstractFileByPath(folder) as TFolder
@@ -243,6 +150,7 @@ export default class TemplateProcessing {
         return result
     }
 }
+
 
 /*
  * Just produced in response to scanning for templates? Perhaps?

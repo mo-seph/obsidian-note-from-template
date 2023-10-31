@@ -13,7 +13,7 @@ export const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
 	outputDirectory:"test",
 	templateFilename:"{{title}}",
 	inputFieldList:"title,body",
-	textReplacementTemplate:"[[{{title}}]]",
+	textReplacementTemplates:["[[{{title}}]]"],
 	templateDirectory: 'templates',
 	replaceSelection: "always",
 	createOpen: "create",
@@ -116,7 +116,7 @@ export class FromTemplateSettingTab extends PluginSettingTab {
 			}));
 		new Setting(containerEl)
 		.setName('Default template filename')
-		.setDesc('Where to put notes if they have not specified with {{template-output}}')
+		.setDesc('Where to put notes if they have not specified with {{template-filename}}')
 		.addText(text => text
 			.setPlaceholder("{{title}}")
 			.setValue(this.plugin.settings.templateFilename)
@@ -128,9 +128,9 @@ export class FromTemplateSettingTab extends PluginSettingTab {
 		.setName('Default replacement string')
 		.setDesc('What replacement string to use if the template has not specified using {{template-replacement}}')
 		.addText(text => text
-			.setValue(this.plugin.settings.textReplacementTemplate)
+			.setValue(this.plugin.settings.textReplacementTemplates[0])
 			.onChange(async (value) => {
-				this.plugin.settings.textReplacementTemplate = value;
+				this.plugin.settings.textReplacementTemplates[0] = value;
 				await this.plugin.saveSettings();
 			}));
 		new Setting(containerEl)
