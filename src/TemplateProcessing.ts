@@ -1,8 +1,5 @@
-// @ts-ignore - not sure how to build a proper typescript def yet
-import * as Mustache from 'mustache';
-import { normalizePath, TAbstractFile, TFile, TFolder, Vault, stringifyYaml, parseYaml} from 'obsidian';
-import { defaultMaxListeners } from 'events';
-import {BAD_CHARS_FOR_FILENAMES_MATCH,  TemplateIdentifier, TemplateActionSettings,  TEMPLATE_FIELDS, TemplateField, ActiveTemplate, TemplateResult } from './SharedInterfaces'
+import {  TFile, TFolder, Vault,  parseYaml} from 'obsidian';
+import {  TemplateIdentifier, TemplateActionSettings,  TEMPLATE_FIELDS, ActiveTemplate } from './SharedInterfaces'
 import { FullTemplate } from './Template';
 
 

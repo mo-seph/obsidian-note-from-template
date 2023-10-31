@@ -1,14 +1,7 @@
 import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder, Modifier, ToggleComponent } from 'obsidian';
-// @ts-ignore - not sure how to build a proper typescript def yet
-import * as Mustache from 'mustache';
-// @ts-ignore - not sure how to build a proper typescript def yet
-import metadataParser from 'markdown-yaml-metadata-parser'
-import { tmpdir } from 'os';
-import { notDeepStrictEqual, strictEqual } from 'assert';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin  from './main';
 import { CreateType, ActiveTemplate, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, ReplacementOptions } from './SharedInterfaces';
-import { settings } from 'cluster';
 import { DateTime } from "luxon";
 
 export class TemplateInputUI extends Modal {

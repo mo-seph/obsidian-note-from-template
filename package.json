@@ -23,7 +23,6 @@
   },
   "dependencies": {
     "luxon": "^2.2.0",
-    "markdown-yaml-metadata-parser": "^3.0.0",
     "mustache": "^4.2.0"
   }
 }

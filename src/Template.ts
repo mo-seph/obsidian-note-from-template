@@ -2,8 +2,6 @@
 import {  TemplateField, ReplaceType, CreateType, TemplateActionSettings, ActiveTemplate, TemplateResult, BAD_CHARS_FOR_FILENAMES_MATCH } from './SharedInterfaces'
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
-// @ts-ignore - not sure how to build a proper typescript def yet
-import metadataParser from 'markdown-yaml-metadata-parser'
 import { normalizePath, stringifyYaml } from 'obsidian';
 
 // Stop mustache from escaping HTML entities as we are generating Markdown
