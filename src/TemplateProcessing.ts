@@ -31,10 +31,10 @@ export default class TemplateProcessing {
      * - a delimiter to turn the input text into field values
      */
     async prepareTemplate(ts:TemplateIdentifier,defaults:TemplateActionSettings,input:string,delimiter:string="\\s+-\\s+") : Promise<ActiveTemplate> {
-        console.log("Getting template ready...",ts)
+        console.debug("Getting template ready...",ts)
 		const template = await this.loadTemplate(ts,defaults)
-        console.log("Got template: ",template)
-        console.log("Splitting input: ",input, template.inputFieldList, delimiter)
+        console.debug("Got template: ",template)
+        console.debug("Splitting input: ",input, template.inputFieldList, delimiter)
 		const fieldData = this.parseInput(input,template.inputFieldList,delimiter)
         return {
 			template:template,
@@ -72,7 +72,7 @@ export default class TemplateProcessing {
         }
         return tmpl
         } catch( error ) {
-            console.log("Couldn't read template: " + c.path, error )
+            console.warn("Couldn't read template: " + c.path, error )
             return {
                 id: c.name.toLowerCase(),
                 name: "Can't parse " + c.name,
@@ -89,8 +89,8 @@ export default class TemplateProcessing {
      */
     async noteToTemplateData(path:string) {
         const data = await this.vault.read(this.vault.getAbstractFileByPath(path) as TFile)
-        const fm_match = /---(.*)---(.*)$/sm
-        console.log("Data: ",data)
+        const fm_match = /---(.*?)---(.*)$/sm
+        console.debug("Data: ",data)
         const m = data.match(fm_match)
 
         if( m ) {
@@ -98,15 +98,20 @@ export default class TemplateProcessing {
             const body = m[2];
             const props:Record<string,any> = {}
             const temp_props:Record<string,any> = {}
-            const fmy:Record<string,any> = parseYaml(fm)
-            for( const key in fmy ) {
-                if( TEMPLATE_FIELDS.contains (key) ) temp_props[key] = fmy[key]
-                else props[key] = fmy[key]
-            };
-            return {
-                body: body,
-                frontmatter: props,
-                template_settings:temp_props
+            try {
+                const fmy:Record<string,any> = parseYaml(fm)
+                for( const key in fmy ) {
+                    if( TEMPLATE_FIELDS.contains (key) ) temp_props[key] = fmy[key]
+                    else props[key] = fmy[key]
+                };
+                return {
+                    body: body,
+                    frontmatter: props,
+                    template_settings:temp_props
+                }
+            } catch( error ) {
+                console.error("Couldn't parse template frontmatter: ",fm)
+                console.error("Error: ",error)
             }
         }
         return {body:data, frontmatter:{}, template_settings:{}}
@@ -143,7 +148,7 @@ export default class TemplateProcessing {
         }
         const result:TemplateFolderSpec[] = []
         descend(this.vault.getRoot(),0,result)
-        console.log(result)
+        console.debug(result)
         return result
     }
 }

@@ -2,7 +2,7 @@ import {  Editor, MarkdownView,  Plugin  } from 'obsidian';
 import { TemplateInputUI } from './TemplateInputUI';
 import { FromTemplateSettingTab, FromTemplatePluginSettings, DEFAULT_SETTINGS } from './SettingsPane';
 import TemplateProcessing from './TemplateProcessing';
-import {  ActiveTemplate,  TemplateIdentifier, ReplacementOptions } from './SharedInterfaces';
+import {  ActiveTemplate,  TemplateIdentifier, ReplacementOptions, TemplateResult } from './SharedInterfaces';
 
 export default class FromTemplatePlugin extends Plugin {
 	settings: FromTemplatePluginSettings;
@@ -75,30 +75,35 @@ export default class FromTemplatePlugin extends Plugin {
 		console.log("Result: ",result)
 
 		return;
+		this.writeTemplate(result,options)
+	}
+
+	async writeTemplate(result:TemplateResult, options:ReplacementOptions) {
 
 		// First try to make the file
+		console.log("Making file")
 		let newFile = null
 		let fileOK = true // Will be false if file creation failed, true if it succeded or was not requested
 		if( options.shouldCreateOpen !== "none" ) {
-			const path =spec.template.outputDirectory + "/" + result.filename + ".md" 
-			try {
+			//try {
 				fileOK = false
-				const file = await this.app.vault.create(path, result.note)
+				const file = await this.app.vault.create(result.fullPath, result.note)
 				fileOK = true
-			} catch (error) {
-				alert("Couldn't create file: " + result.filename + "\n" + error.toString() )
-			}
+			//} catch (error) {
+				//alert("Couldn't create file: " + result.filename + "\n" + error.toString() )
+			//}
 		}
 
 		// Then see if we replace text in the editor
 		//console.log(`Will replace: ${options.willReplaceSelection}, new file: ${newFile}`)
+		console.log("Doing editor replacement")
 		if( options.willReplaceSelection && fileOK ) {
 			options.editor.replaceRange(result.replacementText,
 				options.editor.getCursor("from"), options.editor.getCursor("to"));
 		}
 
 		// Then see if we should open the new file
-
+		console.log("Opening")
 		if( options.shouldCreateOpen === "open" && newFile ) {
 			this.app.workspace.activeLeaf.openFile(newFile)
 		} 

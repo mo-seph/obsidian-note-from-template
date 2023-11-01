@@ -69,6 +69,7 @@ export interface TemplateResult {
     note:string; // The full text of the note including Properties/YAML
     replacementText:string; // The text to replace selected text in the editor with
     filename:string; // The final filename to make the note with
+    fullPath:string; // The full path to write the template to
 }
 
 /*

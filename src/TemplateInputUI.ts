@@ -1,4 +1,4 @@
-import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder, Modifier, ToggleComponent } from 'obsidian';
+import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder, Modifier, ToggleComponent, KeymapEventListener } from 'obsidian';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin  from './main';
 import { CreateType, ActiveTemplate, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, ReplacementOptions } from './SharedInterfaces';
@@ -23,11 +23,30 @@ export class TemplateInputUI extends Modal {
 		//Create the top of the interface - header and input for Title of the new note
 
 		this.titleEl.createEl('h4', { text: "Create from Template"});
+        const errorField = this.contentEl.createDiv({text:"", cls:"from-template-error-text"})
+        const lowerError = this.contentEl.createDiv({text:"", cls:"from-template-error-text"})
+
+        const setError = (error:string) => {
+            this.modalEl.addClass("from-template-Error")
+            errorField.removeAttribute("hidden")
+            errorField.setText(error)
+            lowerError.removeAttribute("hidden")
+            lowerError.setText(error)
+            //alert(error)
+        }
+        const setNeutral = () => {
+            this.modalEl.removeClass("from-template-Error")
+            errorField.setAttribute("hidden","true")
+            lowerError.setAttribute("hidden","true")
+        }
+        setNeutral()
+
+        const setValue = (id:string,value:any) => { this.result.data[id] = value; setNeutral() }
 
         //Create each of the fields
-        console.log("Fields",this.result.template.fields)
-        this.result.template.fields.forEach( (f,i) => {
-            this.createInput(contentEl,this.result.data,f,i)
+        console.debug("Fields",this.result.template.fields)
+        this.result.template.fields.forEach( (field,index) => {
+            this.createInput(contentEl,this.result.data,field,setValue,index)
         })
 
         const makeSubcontrol = (el:HTMLElement,title:string,content:string="",cls:string[]=[]) => {
@@ -124,30 +143,36 @@ export class TemplateInputUI extends Modal {
             });
         });
 
+
+
         //On submit, get the data out of the form, pass through to main plugin for processing
-        const submitTemplate = () => {
-            this.plugin.templateFilled(this.result,this.options)
-			this.close()
+        const submitTemplate = async()  => {
+            console.debug("Filling out template")
+            let result = await this.result.template.fillOutTemplate(this.result)
+            try {
+                const r2 = await this.plugin.writeTemplate(result,this.options)
+                this.close()
+            } catch( error ) {
+                console.debug("Error writing template",error)
+                setError( "Couldn't create file: " + result.filename + "\n" + error.toString())
+            }
         }
-	
+
 		//And a submit button
 		contentEl.createDiv({cls:"from-template-section"})
             .createEl('button', { text: "Add", cls:"from-template-submit" })
                 .addEventListener("click",submitTemplate);
-        this.scope.register(['Mod'],"enter",submitTemplate)
+        this.scope.register(['Mod'],"enter",() => { submitTemplate() } )
+        contentEl.appendChild(lowerError)
 
 	}
-
-
-
-
 
 	/*
 	 * Creates the UI element for putting in the text. Takes a parent HTMLElement, and:
 	 * - creates a div with a title for the control
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
-	createInput(parent:HTMLElement, data:Record<string,string>, field:TemplateField, index:number=-1, initial:string=""){
+	createInput(parent:HTMLElement, data:Record<string,string>, field:TemplateField, setTemplateValue:(k:string,v:any)=>void, index:number=-1, initial:string=""){
 
         const id = field.id
         const inputType = field.inputType
@@ -167,7 +192,7 @@ export class TemplateInputUI extends Modal {
 		const label = labelContainer.createEl("label", {text: labelText})
 		label.htmlFor = id
 
-        //console.log(`Creating field with initial: '${initial}'`,field)
+        //console.debug(`Creating field with initial: '${initial}'`,field)
          
         //Put the data into the record to start
         if( initial) data[field.id] = initial;
@@ -175,10 +200,10 @@ export class TemplateInputUI extends Modal {
         let element:HTMLElement
 
         if(inputType === "area") {
-            console.log(field)
+            console.debug(field)
             const t = new TextAreaComponent(controlEl)
             .setValue(data[id])
-            .onChange((value) => data[id] = value)
+            .onChange((value) => setTemplateValue(id,value))
             t.inputEl.rows = 5;
             element = t.inputEl
             if( field.args[0] && field.args[0].length ) 
@@ -186,11 +211,11 @@ export class TemplateInputUI extends Modal {
         }
         else if( inputType === "text") {
             const initial = data[id] || (field.args.length ? field.args[0] : "")
-            console.log(field)
-            //console.log("Initial: ", initial)
+            console.debug(field)
+            //console.debug("Initial: ", initial)
             const t = new TextComponent(controlEl)
             .setValue(initial)
-            .onChange((value) => data[id] = value)
+            .onChange((value) => setTemplateValue(id,value))
             t.inputEl.size = 50
             element = t.inputEl
             if( field.args[1] && field.args[1].length )
@@ -200,7 +225,7 @@ export class TemplateInputUI extends Modal {
             const initial = data[id] || (field.args.length ? field.args[0] : "") 
             const initial_safe = initial.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")
             data[id] = initial_safe
-            console.log(field)
+            console.debug(field)
             const error = controlEl.createEl("div", {text: "Error! Characters not allowed in filenames: "+BAD_CHARS_FOR_FILENAMES_TEXT, cls:"from-template-error-text"})
             function updateError(v:string) { 
                 const OK = v.match(BAD_CHARS_FOR_FILENAMES_MATCH) ? false : true
@@ -210,7 +235,7 @@ export class TemplateInputUI extends Modal {
             updateError(initial_safe)
             const t = new TextComponent(controlEl)
             .setValue(initial_safe)
-            .onChange((value) => { data[id] = value; updateError(value) })
+            .onChange((value) => {setTemplateValue(id,value); updateError(value)})
             t.inputEl.size = 50
             element = t.inputEl
         }
@@ -220,7 +245,7 @@ export class TemplateInputUI extends Modal {
             const t = new DropdownComponent(controlEl)
             .addOptions(opts)
             .setValue(data[id])
-            .onChange((value) => data[id] = value)
+            .onChange((value) => setTemplateValue(id,value))
             element = t.selectEl
         }
         else if( inputType === "multi") {
@@ -233,7 +258,7 @@ export class TemplateInputUI extends Modal {
                 .onChange((value) => {
                     if( value ) { selected.push(f)}
                     else {selected.remove(f)}
-                    data[id] = selected.join(", ")
+                    setTemplateValue(id, selected.join(", "))
                 })
             }) 
             element = cont
@@ -258,7 +283,7 @@ export class TemplateInputUI extends Modal {
             data[id] = cur
             const t = new TextComponent(controlEl)
             .setValue(cur)
-            .onChange((value) => data[id] = value)
+            .onChange((value) => setTemplateValue(id,value))
             t.inputEl.size = 50
             element = t.inputEl
         }

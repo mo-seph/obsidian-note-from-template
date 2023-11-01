@@ -80,3 +80,10 @@
 .from-template-command-list {
     max-width: 80%;
 }
+
+.from-template-OK {
+    border: 2px solid green;
+}
+.from-template-Error {
+    border: 2px solid red;
+}

@@ -45,7 +45,7 @@ export class FullTemplate implements TemplateActionSettings {
     - a filled out version of the currently selected text in the editor
     */
     async fillOutTemplate(spec:ActiveTemplate) : Promise<TemplateResult> {
-        console.log("Filling out template with Spec: ",spec)
+        console.debug("Filling out template with Spec: ",spec)
         const data = spec.data //The values for variables to put into the template
 
 		//Copy data across to all the alternative formulations of a field
@@ -61,36 +61,32 @@ export class FullTemplate implements TemplateActionSettings {
         const filled_properties:Record<string,any> = {}
         for( const k in this.templateProperties ) {
             const res = this.processProperty(this.templateProperties[k], data)
-            console.log(`for key ${k}, original is ${this.templateProperties[k]}, result is: ${res}`)
             filled_properties[k] = res
         }
         // and turn that into frontmatter
-        console.log("Filled out properties: ", filled_properties)
+        console.debug("Filled out properties: ", filled_properties)
         const frontmatter = stringifyYaml(filled_properties)
-        console.log("YAML: ", frontmatter)
         const note = "---\n"+frontmatter+"\n---\n" + filledTemplate
-        console.log(`Note: <${note}>`)
 
         // finally, figure out the filename, and add it to the data
         const raw_filename = Mustache.render(this.templateFilename,data)
         const filename = normalizePath(raw_filename.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")) //Quick and dirty regex for usable titles
         data['filename'] = filename
+        const fullPath =spec.template.outputDirectory + "/" + filename + ".md" 
 
         // And the replacement text gets everything, including the (constructed) filename
         const replaceText = Mustache.render(spec.textReplacementString,data)
 
-        return {note:note,replacementText:replaceText,filename:filename}
+        return {note:note,replacementText:replaceText,filename:filename,fullPath:fullPath}
     }
 
     processProperty(initial:any, data:Record<string,string>) {
         if( typeof initial === 'string' ) { return Mustache.render(initial,data)}
         if( Array.isArray(initial) ) {
-            console.log("Found array property: ",initial)
             const r = []
             for( const v of initial ) {
                 const processed = Mustache.render(v,data)
                 const split = processed.split(/\s*[,;]\s*/)
-                console.log(`Rendered to ${processed}, split to: `, split)
                 r.push(...split)
             }
             return r
