@@ -106,6 +106,7 @@ Very open to collaboration - drop me a line or PR
 - Use Obsidian markdown/YAML parsing for frontmatter - better handling of list properies etc.
 - Better error handling
 - Better filename support
+- Added option to open file in new Tab
 
 ### 0.1.11
 - Added CSS class to modal for styling
