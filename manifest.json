@@ -2,7 +2,7 @@
 	"id": "obsidian-notes-from-template",
 	"name": "From Template",
 	"version": "0.1.11",
-	"minAppVersion": "0.9.12",
+	"minAppVersion": "1.4.4",
 	"description": "Create new notes from Templates - for each Template, provides a Command to trigger it, and a form to fill in any variables in the template",
 	"author": "Dave Murray-Rust",
 	"authorUrl": "https://dave.murray-rust.org",
