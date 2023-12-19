@@ -25,7 +25,7 @@ export const TEMPLATE_FIELDS = [
 
 
 export type ReplaceType = "always" | "sometimes" | "never"
-export type CreateType = "none" | "create" | "open" | "open-pane"
+export type CreateType = "none" | "create" | "open" | "open-pane" | "open-tab"
 /*
  * This defines whether a template should replace things in the Editor
  * (feels a bit redundant? also, why does it have Editor in?)

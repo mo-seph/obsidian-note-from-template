@@ -137,6 +137,7 @@ export class TemplateInputUI extends Modal {
             .addOption("create","Create, but don't open")
             .addOption("open","Create and open")
             .addOption("open-pane","Create and open in new pane")
+            .addOption("open-tab","Create and open in new tab")
             .setValue(this.options.shouldCreateOpen)
             .onChange((value) => {
                 this.options.shouldCreateOpen = value as CreateType

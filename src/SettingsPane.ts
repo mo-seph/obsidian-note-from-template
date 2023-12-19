@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
 	textReplacementTemplates:["[[{{title}}]]"],
 	templateDirectory: 'templates',
 	replaceSelection: "always",
-	createOpen: "create",
+	createOpen: "open-tab",
 	inputSplit: "\\s+-\\s+",
 	config: '[]'
 }
@@ -100,6 +100,7 @@ export class FromTemplateSettingTab extends PluginSettingTab {
 			.addOption("create","Create but don't open")
 			.addOption("open","Create and open in this pane")
 			.addOption("open-pane","Create and open in new pane")
+			.addOption("open-tab","Create and open in new tab")
 			.setValue(this.plugin.settings.createOpen)
 			.onChange(async (value) => {
 				this.plugin.settings.createOpen = value as CreateType;

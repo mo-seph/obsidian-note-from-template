@@ -1,4 +1,4 @@
-import {  EditableFileView, Editor, MarkdownView,  Plugin  } from 'obsidian';
+import {  EditableFileView, Editor, MarkdownView,  Plugin, WorkspaceLeaf  } from 'obsidian';
 import { TemplateInputUI } from './TemplateInputUI';
 import { FromTemplateSettingTab, FromTemplatePluginSettings, DEFAULT_SETTINGS } from './SettingsPane';
 import TemplateProcessing from './TemplateProcessing';
@@ -30,6 +30,7 @@ export default class FromTemplatePlugin extends Plugin {
 					id:ts.id,
 					name: ts.name,
 					//editorCallback: async (editor, view ) => { this.launchTemplate(editor,view,ts) },
+					// Switched - using callback: lets it be called from anywhere, but we have to guess at the editor/view
 					callback: async () => { this.launchTemplate(undefined,undefined,ts) }
 					
 				});
@@ -76,25 +77,13 @@ export default class FromTemplatePlugin extends Plugin {
 		new TemplateInputUI(this.app,this,template,options).open();
 	}
 
-	/*
-
-	async templateFilled(spec:ActiveTemplate,options:ReplacementOptions) {
-		let result = await spec.template.fillOutTemplate(spec)
-
-		console.log("Active: ",spec)
-		console.log("Options: ",options)
-		console.log("Result: ",result)
-
-		return;
-		this.writeTemplate(result,options)
-	}
-	*/
-
 	
+	// Writes the template to file, does any replacement needed in the active file, opens new file if needed
+	// Current structure of returning null on success and a string on failure is rather ugly
 	async writeTemplate(result:TemplateResult, options:ReplacementOptions) : Promise<void|string> {
 
 		// First try to make the file
-		console.log("Making file")
+		console.debug("Making file")
 		let newFile = null
 		let fileOK = true // Will be false if file creation failed, true if it succeded or was not requested
 		if( options.shouldCreateOpen !== "none" ) {
@@ -111,7 +100,7 @@ export default class FromTemplatePlugin extends Plugin {
 		// Then see if we replace text in the editor
 		//console.log(`Will replace: ${options.willReplaceSelection}, new file: ${newFile}`)
 		if( options.editor ) {
-			console.log("Doing editor replacement")
+			console.debug("Doing editor replacement")
 			if( options.willReplaceSelection && fileOK ) {
 				options.editor.replaceRange(result.replacementText,
 					options.editor.getCursor("from"), options.editor.getCursor("to"));
@@ -119,12 +108,18 @@ export default class FromTemplatePlugin extends Plugin {
 		}
 
 		// Then see if we should open the new file
-		console.log("Opening")
-		if( options.shouldCreateOpen === "open" && newFile ) {
-			this.app.workspace.activeLeaf.openFile(newFile)
-		} 
-		else if( options.shouldCreateOpen === "open-pane" && newFile ) {
-			this.app.workspace.splitActiveLeaf().openFile(newFile)
+		if( newFile) {
+			console.debug("Opening")
+			let leaf:WorkspaceLeaf = undefined
+			if( options.shouldCreateOpen === "open" ) 
+				leaf = this.app.workspace.getLeaf(false)
+			else if( options.shouldCreateOpen === "open-pane" ) 
+				leaf = this.app.workspace.getLeaf("split")
+			else if( options.shouldCreateOpen === "open-tab" ) 
+				leaf = this.app.workspace.getLeaf("tab")
+			if( leaf ) {
+				leaf.openFile(newFile)
+			}
 		}
 
 	}
