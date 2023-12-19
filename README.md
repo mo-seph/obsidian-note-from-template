@@ -101,6 +101,11 @@ Some hotkeys are defined:
 # Development
 Very open to collaboration - drop me a line or PR
 ## Changelog
+### dev
+- Allow calling template even if not in an open editor (can't replace text in e.g. Kanban field yet though)
+- Use Obsidian markdown/YAML parsing for frontmatter - better handling of list properies etc.
+- Better error handling
+- Better filename support
 
 ### 0.1.11
 - Added CSS class to modal for styling

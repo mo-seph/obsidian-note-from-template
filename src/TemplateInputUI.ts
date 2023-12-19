@@ -1,21 +1,14 @@
-import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder, Modifier, ToggleComponent } from 'obsidian';
-// @ts-ignore - not sure how to build a proper typescript def yet
-import * as Mustache from 'mustache';
-// @ts-ignore - not sure how to build a proper typescript def yet
-import metadataParser from 'markdown-yaml-metadata-parser'
-import { tmpdir } from 'os';
-import { notDeepStrictEqual, strictEqual } from 'assert';
+import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder, Modifier, ToggleComponent, KeymapEventListener } from 'obsidian';
 //import { BaseModal } from './BaseModal';
-import FromTemplatePlugin, { ReplacementOptions}  from './main';
-import { CreateType, ReplacementSpec, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT } from './templates';
-import { settings } from 'cluster';
+import FromTemplatePlugin  from './main';
+import { CreateType, ActiveTemplate, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, ReplacementOptions } from './SharedInterfaces';
 import { DateTime } from "luxon";
 
-export class FillTemplate extends Modal {
+export class TemplateInputUI extends Modal {
 	plugin:FromTemplatePlugin
-	result:ReplacementSpec
+	result:ActiveTemplate
 	options:ReplacementOptions
-	constructor(app: App,plugin:FromTemplatePlugin,spec:ReplacementSpec, options:ReplacementOptions ) {
+	constructor(app: App,plugin:FromTemplatePlugin,spec:ActiveTemplate, options:ReplacementOptions ) {
 		super(app);
         this.result = spec
 		this.plugin = plugin;
@@ -30,11 +23,30 @@ export class FillTemplate extends Modal {
 		//Create the top of the interface - header and input for Title of the new note
 
 		this.titleEl.createEl('h4', { text: "Create from Template"});
+        const errorField = this.contentEl.createDiv({text:"", cls:"from-template-error-text"})
+        const lowerError = this.contentEl.createDiv({text:"", cls:"from-template-error-text"})
+
+        const setError = (error:string) => {
+            this.modalEl.addClass("from-template-Error")
+            errorField.removeAttribute("hidden")
+            errorField.setText(error)
+            lowerError.removeAttribute("hidden")
+            lowerError.setText(error)
+            //alert(error)
+        }
+        const setNeutral = () => {
+            this.modalEl.removeClass("from-template-Error")
+            errorField.setAttribute("hidden","true")
+            lowerError.setAttribute("hidden","true")
+        }
+        setNeutral()
+
+        const setValue = (id:string,value:any) => { this.result.data[id] = value; setNeutral() }
 
         //Create each of the fields
-        console.log("Fields",this.result.settings.fields)
-        this.result.settings.fields.forEach( (f,i) => {
-            this.createInput(contentEl,this.result.data,f,i)
+        console.debug("Fields",this.result.template.fields)
+        this.result.template.fields.forEach( (field,index) => {
+            this.createInput(contentEl,this.result.data,field,setValue,index)
         })
 
         const makeSubcontrol = (el:HTMLElement,title:string,content:string="",cls:string[]=[]) => {
@@ -47,7 +59,7 @@ export class FillTemplate extends Modal {
         // An info box...
         makeSubcontrol(contentEl,"Template",`${this.result.templateID.name}`)
         makeSubcontrol(contentEl,"Destination",
-            `${this.result.settings.outputDirectory}/${this.result.settings.templateFilename}.md`,
+            `${this.result.template.outputDirectory}/${this.result.template.templateFilename}.md`,
             ["from-template-code-span"]
             )
 
@@ -66,13 +78,13 @@ export class FillTemplate extends Modal {
         }
         this.options.willReplaceSelection = willReplace()
 
-        const fieldNames = this.result.settings.fields.map(f => f.id)
+        const fieldNames = this.result.template.fields.map(f => f.id)
         fieldNames.push("templateResult")
      
         let replacementText: TextComponent;
         const setReplaceText = (r:string) => {
             replacementText.setValue(r)
-            this.result.replacementTemplate = r
+            this.result.textReplacementString = r
         }
         const replaceSetting = new Setting(contentEl)
         .setName("Replace selected text")
@@ -88,9 +100,9 @@ export class FillTemplate extends Modal {
         //const repDiv = contentEl.createEl("div", {text: "Replacement: ", cls:"setting-item-description"})
         const repDiv = makeSubcontrol(contentEl,"Replacement")
         replacementText = new TextComponent(repDiv)
-            .setValue(this.result.replacementTemplate)
+            .setValue(this.result.textReplacementString)
             .onChange((value) => {
-                this.result.replacementTemplate =  value
+                this.result.textReplacementString =  value
             })
             .setDisabled(!willReplace());
         //replacementText.inputEl.size = 60
@@ -108,7 +120,7 @@ export class FillTemplate extends Modal {
         // Create buttons for the alternative replacements
         const alternatives = makeSubcontrol(contentEl,"Replacements")
         //const alternatives = contentEl.createEl("div", { text: `Replacements:`, cls:["setting-item-description","from-template-command-list"]})
-        this.result.settings.textReplacementTemplates.forEach( (r,i) => {
+        this.result.template.textReplacementTemplates.forEach( (r,i) => {
             const el = new ButtonComponent(alternatives)
                 .setButtonText(`${i+1}: ${r}`).onClick((e) => setReplaceText(r)).buttonEl
             el.addClass("from-template-inline-code-button")
@@ -131,30 +143,39 @@ export class FillTemplate extends Modal {
             });
         });
 
+
+
         //On submit, get the data out of the form, pass through to main plugin for processing
-        const submitTemplate = () => {
-            this.plugin.templateFilled(this.result,this.options)
-			this.close()
+        const submitTemplate = async()  => {
+            console.debug("Filling out template")
+            let result = await this.result.template.fillOutTemplate(this.result)
+            try {
+                const r2 = await this.plugin.writeTemplate(result,this.options)
+                if( r2 ) {
+                    setError( r2 )
+                }
+                else this.close()
+            } catch( error ) {
+                console.debug("Unhandled error writing template",error)
+                setError( "Unexpected problem creating file: " + result.filename + "\n" + error.toString())
+            }
         }
-	
+
 		//And a submit button
 		contentEl.createDiv({cls:"from-template-section"})
             .createEl('button', { text: "Add", cls:"from-template-submit" })
                 .addEventListener("click",submitTemplate);
-        this.scope.register(['Mod'],"enter",submitTemplate)
+        this.scope.register(['Mod'],"enter",() => { submitTemplate() } )
+        contentEl.appendChild(lowerError)
 
 	}
-
-
-
-
 
 	/*
 	 * Creates the UI element for putting in the text. Takes a parent HTMLElement, and:
 	 * - creates a div with a title for the control
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
-	createInput(parent:HTMLElement, data:Record<string,string>, field:TemplateField, index:number=-1, initial:string=""){
+	createInput(parent:HTMLElement, data:Record<string,string>, field:TemplateField, setTemplateValue:(k:string,v:any)=>void, index:number=-1, initial:string=""){
 
         const id = field.id
         const inputType = field.inputType
@@ -174,7 +195,7 @@ export class FillTemplate extends Modal {
 		const label = labelContainer.createEl("label", {text: labelText})
 		label.htmlFor = id
 
-        //console.log(`Creating field with initial: '${initial}'`,field)
+        //console.debug(`Creating field with initial: '${initial}'`,field)
          
         //Put the data into the record to start
         if( initial) data[field.id] = initial;
@@ -182,10 +203,10 @@ export class FillTemplate extends Modal {
         let element:HTMLElement
 
         if(inputType === "area") {
-            console.log(field)
+            console.debug(field)
             const t = new TextAreaComponent(controlEl)
             .setValue(data[id])
-            .onChange((value) => data[id] = value)
+            .onChange((value) => setTemplateValue(id,value))
             t.inputEl.rows = 5;
             element = t.inputEl
             if( field.args[0] && field.args[0].length ) 
@@ -193,11 +214,11 @@ export class FillTemplate extends Modal {
         }
         else if( inputType === "text") {
             const initial = data[id] || (field.args.length ? field.args[0] : "")
-            console.log(field)
-            //console.log("Initial: ", initial)
+            console.debug(field)
+            //console.debug("Initial: ", initial)
             const t = new TextComponent(controlEl)
             .setValue(initial)
-            .onChange((value) => data[id] = value)
+            .onChange((value) => setTemplateValue(id,value))
             t.inputEl.size = 50
             element = t.inputEl
             if( field.args[1] && field.args[1].length )
@@ -206,7 +227,8 @@ export class FillTemplate extends Modal {
         else if( inputType === "note-title") {
             const initial = data[id] || (field.args.length ? field.args[0] : "") 
             const initial_safe = initial.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")
-            console.log(field)
+            data[id] = initial_safe
+            console.debug(field)
             const error = controlEl.createEl("div", {text: "Error! Characters not allowed in filenames: "+BAD_CHARS_FOR_FILENAMES_TEXT, cls:"from-template-error-text"})
             function updateError(v:string) { 
                 const OK = v.match(BAD_CHARS_FOR_FILENAMES_MATCH) ? false : true
@@ -216,7 +238,7 @@ export class FillTemplate extends Modal {
             updateError(initial_safe)
             const t = new TextComponent(controlEl)
             .setValue(initial_safe)
-            .onChange((value) => { data[id] = value; updateError(value) })
+            .onChange((value) => {setTemplateValue(id,value); updateError(value)})
             t.inputEl.size = 50
             element = t.inputEl
         }
@@ -226,7 +248,7 @@ export class FillTemplate extends Modal {
             const t = new DropdownComponent(controlEl)
             .addOptions(opts)
             .setValue(data[id])
-            .onChange((value) => data[id] = value)
+            .onChange((value) => setTemplateValue(id,value))
             element = t.selectEl
         }
         else if( inputType === "multi") {
@@ -239,7 +261,7 @@ export class FillTemplate extends Modal {
                 .onChange((value) => {
                     if( value ) { selected.push(f)}
                     else {selected.remove(f)}
-                    data[id] = selected.join(", ")
+                    setTemplateValue(id, selected.join(", "))
                 })
             }) 
             element = cont
@@ -264,7 +286,7 @@ export class FillTemplate extends Modal {
             data[id] = cur
             const t = new TextComponent(controlEl)
             .setValue(cur)
-            .onChange((value) => data[id] = value)
+            .onChange((value) => setTemplateValue(id,value))
             t.inputEl.size = 50
             element = t.inputEl
         }
