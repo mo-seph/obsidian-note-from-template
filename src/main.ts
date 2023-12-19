@@ -1,4 +1,4 @@
-import {  Editor, MarkdownView,  Plugin  } from 'obsidian';
+import {  EditableFileView, Editor, MarkdownView,  Plugin  } from 'obsidian';
 import { TemplateInputUI } from './TemplateInputUI';
 import { FromTemplateSettingTab, FromTemplatePluginSettings, DEFAULT_SETTINGS } from './SettingsPane';
 import TemplateProcessing from './TemplateProcessing';
@@ -29,7 +29,8 @@ export default class FromTemplatePlugin extends Plugin {
 				const command = this.addCommand( {
 					id:ts.id,
 					name: ts.name,
-					editorCallback: async (editor, view ) => { this.launchTemplate(editor,view,ts) }
+					//editorCallback: async (editor, view ) => { this.launchTemplate(editor,view,ts) },
+					callback: async () => { this.launchTemplate(undefined,undefined,ts) }
 					
 				});
 				this.addedCommands.push( command.id )
@@ -49,23 +50,33 @@ export default class FromTemplatePlugin extends Plugin {
 		} )
 	}
 
-	async launchTemplate(editor:Editor,view:MarkdownView, ts:TemplateIdentifier) {
+	async launchTemplate(editor:(Editor|undefined),view:MarkdownView|undefined, ts:TemplateIdentifier) {
+		// Updated to deal with the idea we might not have a view/editor
+		if( ! view ) view = this.app.workspace.getActiveViewOfType(MarkdownView)
+		if( (! editor) && view ) editor = view.editor
+
+		const initial_selection = editor ? editor.getSelection() : ""
 		// Get the template text and the fields to fill in
 		const template = await this.templates.prepareTemplate(
-			ts,this.settings,editor.getSelection(),this.settings.inputSplit)
+			ts,this.settings,initial_selection,this.settings.inputSplit)
+
 		// Can we fill in extra information here?
-		template.data['currentTitle'] = view.file.basename
-		template.data['currentPath'] = view.file.path
+		if( view ) {
+			template.data['currentTitle'] = view.file.basename
+			template.data['currentPath'] = view.file.path
+		}
+
 		const options:ReplacementOptions = {
 			editor:editor,
-			shouldReplaceSelection:template.template.replaceSelection,
+			shouldReplaceSelection:editor ? template.template.replaceSelection : "never",
 			shouldCreateOpen:template.template.createOpen,
-			willReplaceSelection:true,
+			willReplaceSelection:editor ? true : false,
 		}
 		//This class does all the UI work
 		new TemplateInputUI(this.app,this,template,options).open();
 	}
 
+	/*
 
 	async templateFilled(spec:ActiveTemplate,options:ReplacementOptions) {
 		let result = await spec.template.fillOutTemplate(spec)
@@ -77,29 +88,34 @@ export default class FromTemplatePlugin extends Plugin {
 		return;
 		this.writeTemplate(result,options)
 	}
+	*/
 
-	async writeTemplate(result:TemplateResult, options:ReplacementOptions) {
+	
+	async writeTemplate(result:TemplateResult, options:ReplacementOptions) : Promise<void|string> {
 
 		// First try to make the file
 		console.log("Making file")
 		let newFile = null
 		let fileOK = true // Will be false if file creation failed, true if it succeded or was not requested
 		if( options.shouldCreateOpen !== "none" ) {
-			//try {
+			try {
 				fileOK = false
-				const file = await this.app.vault.create(result.fullPath, result.note)
+				newFile = await this.app.vault.create(result.fullPath, result.note)
 				fileOK = true
-			//} catch (error) {
-				//alert("Couldn't create file: " + result.filename + "\n" + error.toString() )
-			//}
+			} catch (error) {
+                console.debug("Error writing template",error)
+				return("Couldn't create file '" + result.filename + "': " + error.toString() )
+			}
 		}
 
 		// Then see if we replace text in the editor
 		//console.log(`Will replace: ${options.willReplaceSelection}, new file: ${newFile}`)
-		console.log("Doing editor replacement")
-		if( options.willReplaceSelection && fileOK ) {
-			options.editor.replaceRange(result.replacementText,
-				options.editor.getCursor("from"), options.editor.getCursor("to"));
+		if( options.editor ) {
+			console.log("Doing editor replacement")
+			if( options.willReplaceSelection && fileOK ) {
+				options.editor.replaceRange(result.replacementText,
+					options.editor.getCursor("from"), options.editor.getCursor("to"));
+			}
 		}
 
 		// Then see if we should open the new file

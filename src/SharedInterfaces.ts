@@ -31,7 +31,7 @@ export type CreateType = "none" | "create" | "open" | "open-pane"
  * (feels a bit redundant? also, why does it have Editor in?)
  */
 export interface ReplacementOptions {
-	editor:Editor;
+	editor?:Editor;
 	shouldReplaceSelection:ReplaceType
 	shouldCreateOpen:CreateType
 	willReplaceSelection:boolean;

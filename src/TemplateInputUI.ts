@@ -151,10 +151,13 @@ export class TemplateInputUI extends Modal {
             let result = await this.result.template.fillOutTemplate(this.result)
             try {
                 const r2 = await this.plugin.writeTemplate(result,this.options)
-                this.close()
+                if( r2 ) {
+                    setError( r2 )
+                }
+                else this.close()
             } catch( error ) {
-                console.debug("Error writing template",error)
-                setError( "Couldn't create file: " + result.filename + "\n" + error.toString())
+                console.debug("Unhandled error writing template",error)
+                setError( "Unexpected problem creating file: " + result.filename + "\n" + error.toString())
             }
         }
 
