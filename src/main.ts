@@ -56,7 +56,7 @@ export default class FromTemplatePlugin extends Plugin {
 		if( ! view ) view = this.app.workspace.getActiveViewOfType(MarkdownView)
 		if( (! editor) && view ) editor = view.editor
 
-		const initial_selection = editor ? editor.getSelection() : ""
+		const initial_selection = this.getCurrentSelection( editor )
 		// Get the template text and the fields to fill in
 		const template = await this.templates.prepareTemplate(
 			ts,this.settings,initial_selection,this.settings.inputSplit)
@@ -98,14 +98,8 @@ export default class FromTemplatePlugin extends Plugin {
 		}
 
 		// Then see if we replace text in the editor
-		//console.log(`Will replace: ${options.willReplaceSelection}, new file: ${newFile}`)
-		if( options.editor ) {
-			console.debug("Doing editor replacement")
-			if( options.willReplaceSelection && fileOK ) {
-				options.editor.replaceRange(result.replacementText,
-					options.editor.getCursor("from"), options.editor.getCursor("to"));
-			}
-		}
+		if( options.willReplaceSelection && fileOK ) 
+			this.replaceCurrentSelection(result.replacementText,options.editor)
 
 		// Then see if we should open the new file
 		if( newFile) {
@@ -122,6 +116,29 @@ export default class FromTemplatePlugin extends Plugin {
 			}
 		}
 
+	}
+
+	getCurrentSelection(editor?:Editor) {
+		if( editor ) return editor.getSelection();
+		const t = window.getSelection().toString()
+		console.log("Got no Editor, getting from window: ",t)
+		return t
+	}
+
+	replaceCurrentSelection(repl:string,editor?:Editor) {
+		if(editor) {
+			console.log("Got Editor" )
+			editor.replaceRange(repl,
+				editor.getCursor("from"), editor.getCursor("to"));
+		}
+		else {
+			console.log("Got no Editor, putting text on clipboard: ",repl)
+			navigator.clipboard.writeText(repl)
+			// https://developer.mozilla.org/en-US/docs/Web/API/Selection
+			//const sel = window.getSelection()
+			//const selText = sel.toString()
+			//if( sel.anchorNode === sel.focusNode ) {
+		}
 	}
 
 	

@@ -61,7 +61,7 @@ In order to be proper YAML, values cannot start with `{` or they are treated as 
 | template-replacement | A Mustache template to replace the selected text in the editor with. Can pass a list, which will appear as buttons in creator | `{{[[title]]}}` |
 | template-input | If the command is called with some text selected, split it up using the plugin's split pattern, and put the values into those fields | title,body |
 | template-should-replace | Should the template write text back to the document? "always", "sometimes" = only if text is selected, "never"| "sometimes" |
-| template-should-create | Should the template make and open a note? "none"=no note, "create"= create but don't open, "open"=create and open in current editor, "open-pane" = create and open in new pane | "create" |
+| template-should-create | Should the template make and open a note? "none"=no note, "create"= create but don't open, "open"=create and open in current editor, "open-pane" = create and open in new pane, "open-tab" = open in new tab | "open-tab" |
 
 ### Examples
 - Create a new note with a complex filename, then insert the title with a transclusion of the overview:
@@ -83,9 +83,10 @@ template-replacement: "{{templateResult}}"
 | text | none | A text input field - this is the default |  {{name}}, {{country:text}}, {{country:text:Belgium}} |
 | area | none | A text area - default if the field name is 'body' | {{description:area}}, {{body}} |
 | currentDate | format | The current date, using the format in Luxon format (https://moment.github.io/luxon/#/formatting) (Moment.js shouldn't be used for new projects, dayjs doesn't play nicely with the build system) | {{now:currentDate:dd-MM-yyyy}} |
+| choice | choices | A dropdown select field | {{suit:choice:hearts:spades:diamonds:clubs}} |
+| multi | choices | A multi-select field | {{colors:multi:yellow:red:green:blue}} |
 
 ## Non-field tags
-(experimental, in dev)
 | Field | Description | Usage Example |
 | ----- | ----------- | ----- |
 | currentTitle | The title of the active note when the template was triggered | `parent: [[{currentTitle}]]` in frontmatter to create hierarchy |
@@ -102,11 +103,12 @@ Some hotkeys are defined:
 Very open to collaboration - drop me a line or PR
 ## Changelog
 ### dev
-- Allow calling template even if not in an open editor (can't replace text in e.g. Kanban field yet though)
-- Use Obsidian markdown/YAML parsing for frontmatter - better handling of list properies etc.
-- Better error handling
-- Better filename support
-- Added option to open file in new Tab
+- Another refactor - codebase is cleaner, uses Obsidian markdown/YAML parsing for frontmatter, gives better handling of list properies etc.
+- Quality of life improvements:
+    - Allow calling template even if not in an open editor (Note: can't replace text in e.g. Kanban fields, but in those cases copies replacement to Clipboard)
+    - Better error handling
+    - Better filename support
+    - Added option to open file in new Tab
 
 ### 0.1.11
 - Added CSS class to modal for styling
