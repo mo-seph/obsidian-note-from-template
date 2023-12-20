@@ -38,8 +38,8 @@ This would
 
 # Details
 
-## YAML Tags
-Templates can contain YAML tags that will be filed out in the same way as the rest of the template. So this will work as expected:
+## YAML and Properties
+Templates can contain YAML fields that will be filed out in the same way as the rest of the template and become part of the note's Properties. So this will work as expected:
 ```
 ---
 organsiation: "{{organisation}}"
@@ -49,8 +49,22 @@ organsiation: "{{organisation}}"
 
 In order to be proper YAML, values cannot start with `{` or they are treated as dictionaries, so make sure to use `organisation: "{{org}}"` rather than `organisation: {{org}}` in the frontmatter.
 
+For List properties, it will try to be clever if you make the property a List in the template. So you can have a template like this:
+```
+tags:
+  - template-test
+  - "{{tags}}"
+```
+and if you put `extra-tag, another-extra-tag` in the input field, it will render as:
+```
+tags:
+  - template-test
+  - extra-tag
+  - another-extra-tag
+```
 
-## From Template YAML Tags 
+## From Template YAML Properties
+(these will all be filtered out of the rendered note) 
 
 | Name | Value | Default |
 | ---- | ----- | ------- |
