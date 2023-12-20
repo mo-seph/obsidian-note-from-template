@@ -13,8 +13,8 @@ export default class FromTemplatePlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new FromTemplateSettingTab(this.app, this));
-		this.app.workspace.onLayoutReady(() => this.indexTemplates());
 		this.templates = new TemplateProcessing(this.app.vault)
+		this.app.workspace.onLayoutReady(() => this.indexTemplates());
 		this.addCommand({id:"reload",name:"Re-index Templates",callback: async () => this.indexTemplates()})
 	}
 
