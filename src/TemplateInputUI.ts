@@ -1,7 +1,7 @@
 import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatComponent, Notice, Plugin, PluginSettingTab, SearchComponent, Setting, TextAreaComponent, TextComponent, TFile, TFolder, Modifier, ToggleComponent, KeymapEventListener } from 'obsidian';
 //import { BaseModal } from './BaseModal';
 import FromTemplatePlugin  from './main';
-import { CreateType, ActiveTemplate, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, ReplacementOptions } from './SharedInterfaces';
+import { CreateType, ActiveTemplate, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, ReplacementOptions, FolderOK } from './SharedInterfaces';
 import { DateTime } from "luxon";
 
 export class TemplateInputUI extends Modal {
@@ -310,4 +310,52 @@ export class TemplateInputUI extends Modal {
 
 function ucFirst(s: string): string {
     return s[0].toUpperCase() + s.substring(1) 
+}
+
+export class FolderCreateUI extends Modal {
+    input:FolderOK
+    func:()=>void;
+    constructor(app:App,input:FolderOK,func:()=>void) {
+        super(app)
+        this.input = input
+        this.func = func
+    }
+	async onOpen() {
+		let {contentEl} = this;
+        //this.modalEl.addClass("from-template-modal")
+    		//And a submit button
+        const folder_to_create = 
+		contentEl.createEl('h4', { text: "Missing parent folder for note"});
+        contentEl.createEl('div',{text: this.input.path,cls:"from-template-error-text"})
+        contentEl.createEl('hr')
+        const folDiv = contentEl.createDiv()
+        folDiv.createEl('div',{text: "The following paths are missing: "})
+        const pDiv = folDiv.createEl('div',{cls:"from-template-folder-container"})
+        const goodDiv = pDiv.createEl('span',{cls:"from-template-folder-OK"})
+        for( const g in this.input.good ) {
+            goodDiv.createEl('span',{text: "✅ "+this.input.good[g],cls:"from-template-ok-text"})
+            goodDiv.createEl('span',{text: " / "})
+        }
+        const badDiv = pDiv.createEl('span',{cls:"from-template-folder-bad"})
+        for( const b in this.input.bad ) {
+            badDiv.createEl('span',{text: "❌ "+this.input.bad[b],cls:"from-template-error-text"})
+            badDiv.createEl('span',{text: " / "})
+        }
+        contentEl.createEl('hr')
+		//const submits = contentEl.createDiv({cls:"from-template-section"})
+		const submits = contentEl.createDiv()
+        const createFolder = () => {
+            this.app.vault.createFolder(this.input.path)
+            this.close()
+            this.func()
+        }
+        const notCreateFolder = () => {
+            this.close()
+            this.func()
+        }
+        submits.createEl('button', { text: "Create"})
+            .addEventListener("click",createFolder);
+        submits.createEl('button', { text: "Don't Create"})
+            .addEventListener("click",notCreateFolder);
+    }
 }

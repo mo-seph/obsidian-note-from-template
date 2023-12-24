@@ -87,3 +87,22 @@
 .from-template-Error {
     border: 2px solid red;
 }
+
+.from-template-folder-container {
+    border: 2px solid grey;
+    padding: 5pt;
+}
+.from-template-folder-OK {
+    /*
+    border: 2px solid green;
+    padding:0pt 5pt 0pt 5pt;
+    margin: 2pt;
+    */
+}
+.from-template-folder-bad {
+    /*
+    border: 2px solid red;
+    padding:0pt 5pt 0pt 5pt;
+    margin: 2pt;
+    */
+}

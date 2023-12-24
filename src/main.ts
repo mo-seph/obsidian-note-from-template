@@ -1,8 +1,8 @@
-import {  EditableFileView, Editor, MarkdownView,  Plugin, WorkspaceLeaf  } from 'obsidian';
-import { TemplateInputUI } from './TemplateInputUI';
+import {  EditableFileView, Editor, MarkdownView,  Plugin, TFolder, WorkspaceLeaf  } from 'obsidian';
+import { TemplateInputUI, FolderCreateUI } from './TemplateInputUI';
 import { FromTemplateSettingTab, FromTemplatePluginSettings, DEFAULT_SETTINGS } from './SettingsPane';
 import TemplateProcessing from './TemplateProcessing';
-import {  ActiveTemplate,  TemplateIdentifier, ReplacementOptions, TemplateResult } from './SharedInterfaces';
+import {  ActiveTemplate,  TemplateIdentifier, ReplacementOptions, TemplateResult, FolderOK } from './SharedInterfaces';
 
 export default class FromTemplatePlugin extends Plugin {
 	settings: FromTemplatePluginSettings;
@@ -81,7 +81,7 @@ export default class FromTemplatePlugin extends Plugin {
 	// Writes the template to file, does any replacement needed in the active file, opens new file if needed
 	// Current structure of returning null on success and a string on failure is rather ugly
 	async writeTemplate(result:TemplateResult, options:ReplacementOptions) : Promise<void|string> {
-
+		const vault = this.app.vault
 		// First try to make the file
 		console.debug("Making file")
 		let newFile = null
@@ -89,7 +89,9 @@ export default class FromTemplatePlugin extends Plugin {
 		if( options.shouldCreateOpen !== "none" ) {
 			try {
 				fileOK = false
-				newFile = await this.app.vault.create(result.fullPath, result.note)
+				await this.createFolderIfNeeded(result.folder)
+				const fullPath = result.folder + "/" + result.filename + ".md"
+				newFile = await vault.create(fullPath, result.note)
 				fileOK = true
 			} catch (error) {
                 console.debug("Error writing template",error)
@@ -115,7 +117,45 @@ export default class FromTemplatePlugin extends Plugin {
 				leaf.openFile(newFile)
 			}
 		}
+	}
 
+	/*
+	 * Checks if a given path exists as a folder
+	 */
+	checkIfFolderExists(folder:string) : FolderOK {
+		const vault = this.app.vault
+		const curFolder = vault.getAbstractFileByPath(folder)
+		if( curFolder && (curFolder instanceof TFolder)) {
+			return {ok:true,good:[],bad:[],path:folder}
+		}
+		const bits = folder.split("/")
+		console.debug("Folder does not exist - checking parents",bits)
+		var currentPath = ""
+		var good = []
+		var bad = [...bits]
+		for (const b in bits ) {
+			currentPath += (currentPath.length ? "/" : "") + bits[b]
+			const f = vault.getAbstractFileByPath(currentPath)
+			if( f && (f instanceof TFolder)) {
+				good.push(bad.shift())
+			}
+			else {
+				break;
+			}
+		}
+		return {ok:false, good:good, bad:bad,path:folder}
+	}
+
+	async createFolderIfNeeded(folder:string) {
+		const ok = this.checkIfFolderExists(folder)
+		if( ok['ok']) return;
+		var doneFunc
+		const p:Promise<null> = new Promise((resolve,reject)=>{
+			doneFunc=resolve
+		})
+		const ui = new FolderCreateUI(this.app,ok,doneFunc)
+		ui.open()
+		await p;
 	}
 
 	getCurrentSelection(editor?:Editor) {

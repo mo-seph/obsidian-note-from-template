@@ -2,7 +2,7 @@
 import {  TemplateField, ReplaceType, CreateType, TemplateActionSettings, ActiveTemplate, TemplateResult, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_PATHS_MATCH } from './SharedInterfaces'
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
-import { normalizePath, stringifyYaml } from 'obsidian';
+import { Vault, normalizePath, stringifyYaml } from 'obsidian';
 
 // Stop mustache from escaping HTML entities as we are generating Markdown
 Mustache.escape = function(text:string) {return text;};
@@ -63,28 +63,32 @@ export class FullTemplate implements TemplateActionSettings {
             const res = this.processProperty(this.templateProperties[k], data)
             filled_properties[k] = res
         }
-        // and turn that into frontmatter
+        // and turn that into frontmatter if necessary
         console.debug("Filled out properties: ", filled_properties)
-        const frontmatter = stringifyYaml(filled_properties)
-        const note = "---\n"+frontmatter+"\n---\n" + filledTemplate
+        var note = filledTemplate
+        if( Object.keys(filled_properties).length > 0 ) {
+            const frontmatter =  stringifyYaml(filled_properties)
+            //console.log("Frontmatter: ",frontmatter)
+            note = "---\n"+frontmatter+"\n---\n" + filledTemplate
+        }
 
         // finally, figure out the filename, and add it to the data
         const raw_filename = Mustache.render(this.templateFilename,data)
         const filename = normalizePath(raw_filename.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")) //Quick and dirty regex for usable titles
-        console.log("Path starting with: ",spec.template.outputDirectory)
-        const raw_pathname = Mustache.render(spec.template.outputDirectory,data)
-        console.log("Templated to: ", raw_pathname)
-        const pathname = raw_pathname.replace(BAD_CHARS_FOR_PATHS_MATCH,"") //Quick and dirty regex for usable titles
-        console.log("Made Safe to: ", pathname)
+        //console.log("Path starting with: ",spec.template.outputDirectory)
+        const raw_foldername = Mustache.render(spec.template.outputDirectory,data)
+        //console.log("Templated to: ", raw_foldername)
+        const foldername = raw_foldername.replace(BAD_CHARS_FOR_PATHS_MATCH,"") //Quick and dirty regex for usable titles
+        //console.log("Made Safe to: ", foldername)
         // could strip characters here?
         data['filename'] = filename
-        const fullPath = pathname + "/" + filename + ".md" 
 
         // And the replacement text gets everything, including the (constructed) filename
         const replaceText = Mustache.render(spec.textReplacementString,data)
 
-        return {note:note,replacementText:replaceText,filename:filename,fullPath:fullPath}
+        return {note:note,replacementText:replaceText,filename:filename,folder:foldername}
     }
+
 
     processProperty(initial:any, data:Record<string,string>) {
         if( typeof initial === 'string' ) { return Mustache.render(initial,data)}

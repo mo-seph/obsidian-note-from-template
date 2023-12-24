@@ -70,7 +70,7 @@ export interface TemplateResult {
     note:string; // The full text of the note including Properties/YAML
     replacementText:string; // The text to replace selected text in the editor with
     filename:string; // The final filename to make the note with
-    fullPath:string; // The full path to write the template to
+    folder:string; // The full path to write the template to
 }
 
 /*
@@ -103,4 +103,14 @@ export interface TemplateFolderSpec {
     location:TFolder
     depth:number
     numTemplates:number
+}
+
+/*
+ * Just used for looking at whether folders exist or need to be created
+ */
+export interface FolderOK {
+    ok:boolean
+    path:string
+    good?:string[]
+    bad?:string[]
 }
