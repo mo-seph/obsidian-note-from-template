@@ -1,5 +1,5 @@
 
-import {  TemplateField, ReplaceType, CreateType, TemplateActionSettings, ActiveTemplate, TemplateResult, BAD_CHARS_FOR_FILENAMES_MATCH } from './SharedInterfaces'
+import {  TemplateField, ReplaceType, CreateType, TemplateActionSettings, ActiveTemplate, TemplateResult, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_PATHS_MATCH } from './SharedInterfaces'
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 import { normalizePath, stringifyYaml } from 'obsidian';
@@ -71,8 +71,14 @@ export class FullTemplate implements TemplateActionSettings {
         // finally, figure out the filename, and add it to the data
         const raw_filename = Mustache.render(this.templateFilename,data)
         const filename = normalizePath(raw_filename.replace(BAD_CHARS_FOR_FILENAMES_MATCH,"")) //Quick and dirty regex for usable titles
+        console.log("Path starting with: ",spec.template.outputDirectory)
+        const raw_pathname = Mustache.render(spec.template.outputDirectory,data)
+        console.log("Templated to: ", raw_pathname)
+        const pathname = raw_pathname.replace(BAD_CHARS_FOR_PATHS_MATCH,"") //Quick and dirty regex for usable titles
+        console.log("Made Safe to: ", pathname)
+        // could strip characters here?
         data['filename'] = filename
-        const fullPath =spec.template.outputDirectory + "/" + filename + ".md" 
+        const fullPath = pathname + "/" + filename + ".md" 
 
         // And the replacement text gets everything, including the (constructed) filename
         const replaceText = Mustache.render(spec.textReplacementString,data)

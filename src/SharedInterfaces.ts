@@ -10,6 +10,7 @@ import { FullTemplate } from './Template';
  */
 export const BAD_CHARS_FOR_FILENAMES_TEXT = ":[]?/\\"
 export const BAD_CHARS_FOR_FILENAMES_MATCH = /[:[\]?/\\]/g
+export const BAD_CHARS_FOR_PATHS_MATCH = /[:[\]?\\]/g
 
 // Which are the YAML fields used by the template system
 export const TEMPLATE_FIELDS = [
