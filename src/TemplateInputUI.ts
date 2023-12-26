@@ -223,8 +223,10 @@ export class TemplateInputUI extends Modal {
             .onChange((value) => setTemplateValue(id,value))
             t.inputEl.size = 50
             element = t.inputEl
-            if( id === "tags") new TagSuggest(element as HTMLInputElement,this.app)
-            else new LinkSuggest(element as HTMLInputElement, this.app)
+            if( this.plugin.settings.inputSuggestions ) {
+                if( id === "tags") new TagSuggest(element as HTMLInputElement,this.app)
+                else new LinkSuggest(element as HTMLInputElement, this.app)
+            }
             if( field.args[1] && field.args[1].length )
                 labelContainer.createEl("div", {text: field.args[1], cls:"from-template-description"})
         }

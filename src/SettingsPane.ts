@@ -7,6 +7,7 @@ export interface FromTemplatePluginSettings extends TemplateActionSettings {
 	templateDirectory: string;
 	inputSplit: string;
 	config: string;
+	inputSuggestions: boolean;
 }
 
 export const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: FromTemplatePluginSettings = {
 	replaceSelection: "always",
 	createOpen: "open-tab",
 	inputSplit: "\\s+-\\s+",
+	inputSuggestions: true,
 	config: '[]'
 }
 
@@ -153,6 +155,14 @@ export class FromTemplateSettingTab extends PluginSettingTab {
 					this.plugin.settings.inputSplit = value;
 					await this.plugin.saveSettings();
 				}));
-
+		new Setting(containerEl)
+			.setName('Input Suggestions')
+			.setDesc('Add suggestion support to text boxes. Will add suggestions for links when typing [[, and for tags for a field called "tags"')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.inputSuggestions)
+				.onChange(async (value) => {
+					this.plugin.settings.inputSuggestions = value;
+					await this.plugin.saveSettings();
+				}));
 	}
 }
