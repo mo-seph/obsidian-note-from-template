@@ -62,7 +62,7 @@ export class FolderCreateUI extends Modal {
  * a comma separator.
  * 
  */
-abstract class SetTextSuggest extends AbstractInputSuggest<string> {
+abstract class AddTextSuggest extends AbstractInputSuggest<string> {
     content: string[];
     targetMatch = /^(.*),\s*([^,]*)/
 
@@ -132,7 +132,7 @@ abstract class SetTextSuggest extends AbstractInputSuggest<string> {
 
 }
 
-export class TagSuggest extends SetTextSuggest {
+export class TagSuggest extends AddTextSuggest {
 	getContent() {
 		// @ts-ignore - this is an undocumented function...
 		const tagMap:Map<string,any> = this.app.metadataCache.getTags();
@@ -140,7 +140,7 @@ export class TagSuggest extends SetTextSuggest {
 	  }
 }
 
-export class LinkSuggest extends SetTextSuggest {
+export class LinkSuggest extends AddTextSuggest {
 	getContent() {
         return this.app.vault.getFiles().filter((f)=>f.extension === "md").map((f)=>f.basename)
     }
