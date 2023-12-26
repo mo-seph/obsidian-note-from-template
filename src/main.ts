@@ -1,8 +1,9 @@
-import {  EditableFileView, Editor, MarkdownView,  Plugin, TFolder, WorkspaceLeaf  } from 'obsidian';
-import { TemplateInputUI, FolderCreateUI } from './TemplateInputUI';
+import {  Editor,  MarkdownView,    Plugin, TFolder,  WorkspaceLeaf} from 'obsidian';
+import { TemplateInputUI} from './TemplateInputUI';
 import { FromTemplateSettingTab, FromTemplatePluginSettings, DEFAULT_SETTINGS } from './SettingsPane';
 import TemplateProcessing from './TemplateProcessing';
-import {  ActiveTemplate,  TemplateIdentifier, ReplacementOptions, TemplateResult, FolderOK } from './SharedInterfaces';
+import {    TemplateIdentifier, ReplacementOptions, TemplateResult, FolderOK } from './SharedInterfaces';
+import { FolderCreateUI} from './UISupport';
 
 export default class FromTemplatePlugin extends Plugin {
 	settings: FromTemplatePluginSettings;
@@ -16,6 +17,7 @@ export default class FromTemplatePlugin extends Plugin {
 		this.templates = new TemplateProcessing(this.app.vault)
 		this.app.workspace.onLayoutReady(() => this.indexTemplates());
 		this.addCommand({id:"reload",name:"Re-index Templates",callback: async () => this.indexTemplates()})
+		console.log("Reloaded Templates!")
 	}
 
 	// Adds all the template commands - calls getTemplates which looks for files in the settings.templateDirectory
@@ -38,6 +40,8 @@ export default class FromTemplatePlugin extends Plugin {
 			}
 		})
 	}
+
+
 
 	clearTemplateCommands() {
 		//From https://liamca.in/Obsidian/API+FAQ/commands/unload+a+Command
@@ -194,8 +198,8 @@ export default class FromTemplatePlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
-}
 
+}
 
 
 

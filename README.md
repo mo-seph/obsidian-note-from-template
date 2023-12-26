@@ -118,11 +118,14 @@ Very open to collaboration - drop me a line or PR
 ## Changelog
 ### dev
 - Another refactor - codebase is cleaner, uses Obsidian markdown/YAML parsing for frontmatter, gives better handling of list properies etc.
+- Added initial suggestion support: now a `tags` field will suggest existing tags, and other fields will suggest internal links if `[[` is entered.
 - Quality of life improvements:
     - Allow calling template even if not in an open editor (Note: can't replace text in e.g. Kanban fields, but in those cases copies replacement to Clipboard)
     - Better error handling
     - Better filename support
     - Added option to open file in new Tab
+    - Can use `{{properties}}` in `template-output` (e.g. `template-output: Projects/{{project}}` to put files in project directories)
+    - Will prompt for creating folders that don't exist
 
 ### 0.1.11
 - Added CSS class to modal for styling
