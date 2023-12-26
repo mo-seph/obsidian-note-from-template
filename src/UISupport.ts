@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, FuzzySuggestModal, Modal, SearchResult, TFile, fuzzySearch, prepareFuzzySearch } from "obsidian";
+import { AbstractInputSuggest, App, FuzzySuggestModal, Modal, SearchResult, TFile, TextComponent, fuzzySearch, prepareFuzzySearch } from "obsidian";
 import { FolderOK } from "./SharedInterfaces";
 
 
@@ -28,7 +28,7 @@ export class FolderCreateUI extends Modal {
         }
         const badDiv = pDiv.createEl('span',{cls:"from-template-folder-bad"})
         for( const b in this.input.bad ) {
-            badDiv.createEl('span',{text: "❌ "+this.input.bad[b],cls:"from-template-error-text"})
+            badDiv.createEl('span',{text: "⚠️ "+this.input.bad[b],cls:"from-template-error-text"})
             badDiv.createEl('span',{text: " / "})
         }
         contentEl.createEl('hr')
@@ -159,3 +159,27 @@ export class LinkSuggest extends SetTextSuggest {
         return `[[${content}]]`
     }
 }
+
+/* Experiment towards making a UI that turns suggestions in to visually distinct elements
+export class ContentEditableTest extends Modal {
+    editDiv:HTMLDivElement
+
+    async onOpen() {
+		let {contentEl} = this; 
+        contentEl.createEl("h4",{text:"ContentEditable"})
+        this.editDiv = contentEl.createEl("div",{text:"Edit me"})
+        this.editDiv.setAttribute("contenteditable","true")
+        this.addElement("hello","from-template-text-completion-a")
+        this.addElement("there","from-template-text-completion-b")
+
+    }
+
+    addElement(tx:string, cls:string) {
+        const el = this.editDiv.createSpan(cls)
+        el.setText(tx)
+        const but = el.createEl("button")
+        but.setText("X")
+        but.onclick = () => el.detach()
+    }
+}
+*/
