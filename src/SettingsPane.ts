@@ -119,7 +119,7 @@ export class FromTemplateSettingTab extends PluginSettingTab {
 			}));
 		new Setting(containerEl)
 		.setName('Default template filename')
-		.setDesc('Where to put notes if they have not specified with {{template-filename}}')
+		.setDesc('What to call notes if they have not specified {{template-filename}}')
 		.addText(text => text
 			.setPlaceholder("{{title}}")
 			.setValue(this.plugin.settings.templateFilename)
