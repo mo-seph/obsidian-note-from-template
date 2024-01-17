@@ -128,7 +128,8 @@ export class FullTemplate implements TemplateActionSettings {
     // Allows tags to be named e.g. {{title:text}}, or {{info:dropdown:a:b:c:}}
     // and turned into something useful
     parseField(input:string) : TemplateField {
-        const parts = input.split(":");
+        // Use a positive lookbehind assertion to split only if ":" is not preceded by "\"
+        const parts = input.split(/(?<!\\):/).map(part => part.replace("\\:", ":"));
         const id = parts[0] || input;
         return {
             id: id,
