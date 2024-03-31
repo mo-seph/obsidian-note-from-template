@@ -118,6 +118,7 @@ abstract class AddTextSuggest extends AbstractInputSuggest<string> {
         //console.log(`Got '${head}','${tail}' from `, this.inputEl.value)
         if( head.length > 0 ) this.inputEl.value = head + ", " +this.wrapContent(content)
         else this.inputEl.value = this.wrapContent(content) 
+        this.inputEl.dispatchEvent(new Event("change"))
         this.inputEl.setSelectionRange(0, 1)
         this.inputEl.setSelectionRange(this.inputEl.value.length,this.inputEl.value.length)
         this.inputEl.focus()

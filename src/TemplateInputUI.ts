@@ -217,15 +217,19 @@ export class TemplateInputUI extends Modal {
         else if( inputType === "text") {
             const initial = data[id] || (field.args.length ? field.args[0] : "")
             console.debug(field)
+            // Make a function to all from somewhere else to fill in the value...
+            const cb = (value:string) => {
+                setTemplateValue(id, value)
+            }
             //console.debug("Initial: ", initial)
             const t = new TextComponent(controlEl)
             .setValue(initial)
-            .onChange((value) => setTemplateValue(id,value))
+            .onChange( cb )
             t.inputEl.size = 50
             element = t.inputEl
             if( this.plugin.settings.inputSuggestions ) {
-                if( id === "tags") new TagSuggest(element as HTMLInputElement,this.app)
-                else new LinkSuggest(element as HTMLInputElement, this.app)
+                if( id === "tags") new TagSuggest(element as HTMLInputElement,this.app, cb)
+                else new LinkSuggest(element as HTMLInputElement, this.app, cb)
             }
             if( field.args[1] && field.args[1].length )
                 labelContainer.createEl("div", {text: field.args[1], cls:"from-template-description"})
