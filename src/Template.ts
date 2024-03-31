@@ -60,8 +60,15 @@ export class FullTemplate implements TemplateActionSettings {
         // Then, go through the properties object, and fill them out
         const filled_properties:Record<string,any> = {}
         for( const k in this.templateProperties ) {
-            const res = this.processProperty(this.templateProperties[k], data)
-            filled_properties[k] = res
+            try {
+                const res = this.processProperty(this.templateProperties[k], data)
+                filled_properties[k] = res
+            } catch (error) {
+                console.log(`Was trying to process property ${data} based on ${this.templateProperties[k]}`)
+                console.log(data)
+                console.log("Did the property need quotes?")
+                throw error
+            }
         }
         // and turn that into frontmatter if necessary
         console.debug("Filled out properties: ", filled_properties)

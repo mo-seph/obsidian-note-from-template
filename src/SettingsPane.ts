@@ -148,7 +148,7 @@ export class FromTemplateSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Selection split')
-			.setDesc('A regex to split up the input selection to fill in extra fields in the note creation box')
+			.setDesc('A regex to split up the input selection to fill in extra fields in the note creation box. Should default to "\\s+-\\s+"')
 			.addText(text => text
 				.setValue(this.plugin.settings.inputSplit)
 				.onChange(async (value) => {
