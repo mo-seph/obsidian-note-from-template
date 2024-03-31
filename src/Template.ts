@@ -3,6 +3,7 @@ import {  TemplateField, ReplaceType, CreateType, TemplateActionSettings, Active
 // @ts-ignore - not sure how to build a proper typescript def yet
 import * as Mustache from 'mustache';
 import { Vault, normalizePath, stringifyYaml } from 'obsidian';
+import { ucFirst } from './UISupport';
 
 // Stop mustache from escaping HTML entities as we are generating Markdown
 Mustache.escape = function(text:string) {return text;};
@@ -116,7 +117,7 @@ export class FullTemplate implements TemplateActionSettings {
         //const templateFields: Array<Array<any>> = Mustache.parse(template);
         const templateFields: string[][] = Mustache.parse(template);
         
-        const titleField:TemplateField = {id:"title",inputType:"note-title",args:[],alternatives:[]}
+        const titleField:TemplateField = {id:"title",inputType:"note-title",args:[],alternatives:[],description:"Title"}
 
         const fields:TemplateField[] = [titleField]
 
@@ -135,13 +136,24 @@ export class FullTemplate implements TemplateActionSettings {
     // Allows tags to be named e.g. {{title:text}}, or {{info:dropdown:a:b:c:}}
     // and turned into something useful
     parseField(input:string) : TemplateField {
-        const parts = input.split(":");
+        //const parts = input.split(":");
+         // Use a positive lookbehind assertion to split only if ":" is not preceded by "\"
+        const parts = input.split(/(?<!\\):/).map(part => part.replace("\\:", ":"));
         const id = parts[0] || input;
+        var desc = ucFirst(id)
+        const desc_match = /(.*)(?<!\\)\|(.*)/
+
+        const dm = parts[parts.length-1].match(desc_match)
+        if( dm ) {
+            parts[parts.length-1] = dm[1]
+            desc = dm[2]
+        }
         return {
             id: id,
             inputType: parts[1] || ( id === "body" ? "area" : "text" ),
             args: parts.slice(2),
-            alternatives: input === id ? [] : [input]
+            alternatives: input === id ? [] : [input],
+            description : desc
         }
     }
 

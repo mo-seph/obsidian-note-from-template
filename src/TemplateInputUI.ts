@@ -3,7 +3,7 @@ import { App, ButtonComponent, DropdownComponent, Editor, Modal, MomentFormatCom
 import FromTemplatePlugin  from './main';
 import { CreateType, ActiveTemplate, TemplateField, BAD_CHARS_FOR_FILENAMES_MATCH, BAD_CHARS_FOR_FILENAMES_TEXT, ReplacementOptions, FolderOK } from './SharedInterfaces';
 import { DateTime } from "luxon";
-import { LinkSuggest, TagSuggest } from './UISupport';
+import { LinkSuggest, TagSuggest, ucFirst } from './UISupport';
 
 export class TemplateInputUI extends Modal {
 	plugin:FromTemplatePlugin
@@ -192,7 +192,7 @@ export class TemplateInputUI extends Modal {
         // Create div and label
 		const controlEl = parent.createEl('div',{cls:"from-template-section"});
         
-		const labelText = index < 9 ? `${ucFirst(id)} (${index+1}): ` : `${ucFirst(id)}: `;
+		const labelText = index < 9 ? `${field.description} (${index+1}): ` : `${field.description}: `;
 		const labelContainer = controlEl.createEl("div", {cls:"from-template-label"})
 		const label = labelContainer.createEl("label", {text: labelText})
 		label.htmlFor = id
@@ -317,7 +317,5 @@ export class TemplateInputUI extends Modal {
 	}
 };
 
-function ucFirst(s: string): string {
-    return s[0].toUpperCase() + s.substring(1) 
-}
+
 

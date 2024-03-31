@@ -184,3 +184,7 @@ export class ContentEditableTest extends Modal {
     }
 }
 */
+
+export function ucFirst(s: string): string {
+    return s[0].toUpperCase() + s.substring(1) 
+}
