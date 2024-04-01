@@ -92,6 +92,9 @@ template-replacement: "{{templateResult}}"
 
 
 ## Field Types
+
+Each field is double curly braces, a field ID, a field type (defaults to text), some number of arguments separated by `:` and optionally a description after a `|`, i.e. `{{fieldID:fieldType:arg1:arg2|This is an example field}}`
+
 | Type | Args | Description | Example(s) |
 | ---- | ----- | ------- | ---- |
 | text | none | A text input field - this is the default |  {{name}}, {{country:text}}, {{country:text:Belgium}} |
@@ -117,6 +120,9 @@ Some hotkeys are defined:
 Very open to collaboration - drop me a line or PR
 ## Changelog
 ### dev
+- Tidied up styling
+- Added in support for escaping delimiters in fields (e.g. `hh\:mm\:ss` for a time value)
+- Added in descriptions for fields with a `|` character, e.g `{{field|description}}` which will be shown in the template UI.
 - Another refactor - codebase is cleaner, uses Obsidian markdown/YAML parsing for frontmatter, gives better handling of list properies etc.
 - Added initial suggestion support: now a `tags` field will suggest existing tags, and other fields will suggest internal links if `[[` is entered.
 - Quality of life improvements:
