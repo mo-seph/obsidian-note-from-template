@@ -81,7 +81,7 @@ export interface TemplateField {
 	inputType: string // What kind of input is it?
 	args: string[]
 	alternatives: string[]
-    description: string
+    description: string 
 }
 
 

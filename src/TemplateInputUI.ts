@@ -23,7 +23,7 @@ export class TemplateInputUI extends Modal {
         //console.log("Data before filling out template",this.result.data)
 		//Create the top of the interface - header and input for Title of the new note
 
-		this.titleEl.createEl('h4', { text: "Create from Template"});
+		this.titleEl.createEl('h4', { text: "Create from Template", cls:"from-template-title"});
         const errorField = this.contentEl.createDiv({text:"", cls:"from-template-error-text"})
         const lowerError = this.contentEl.createDiv({text:"", cls:"from-template-error-text"})
 
@@ -43,27 +43,61 @@ export class TemplateInputUI extends Modal {
         setNeutral()
 
         const setValue = (id:string,value:any) => { this.result.data[id] = value; setNeutral() }
+        
+
+
+ 
+        interface SubcontrolParams {
+            title:string;
+            content?:string;
+            description?:string;
+            labelCls?:string[];
+            contentCls?:string[];
+            rowCls?:string[];
+            keyDisplay?:string;
+        };
+        const b:SubcontrolParams = {title:"Hello"}
+
+        const separator = () => contentEl.createEl("hr",{cls:"from-template-section-sep"})
+        const makeSubcontrol = (el:HTMLElement,{title,content=null,description=null,labelCls=[],contentCls=[],rowCls= [], keyDisplay= null}:SubcontrolParams) => {
+            const sc = el.createDiv({cls:["from-template-control-row",...rowCls]})
+            //const sc = contentEl.createDiv({cls:["from-template-subsection","setting-item-description"]})
+            const label = sc.createDiv({cls:"from-template-description-column"}) 
+            label.createDiv({text: `${title}:`,cls:["from-template-sublabel",...labelCls]}) 
+            if(description) label.createDiv({text: description,cls:["from-template-label-description",...labelCls]}) 
+            const contr = sc.createDiv({cls:"from-template-control-column"}) 
+            if( content ) 
+                contr.createSpan({text: `${content}`,cls:["from-template-subcontrol",...contentCls]}) 
+            if( keyDisplay ) {
+                const key = sc.createDiv({cls:"from-template-key-column"}) 
+                key.createDiv({text:keyDisplay, cls:"from-template-shortkey"}) 
+            }
+
+            return contr;
+        }
+
+        // Elements for information
+        makeSubcontrol(contentEl,{
+            title:"Template",
+            content:`${this.result.templateID.name}`,
+            rowCls:["from-template-control-row-minimal-space"]})
+
+        makeSubcontrol(contentEl,{
+            title:"Destination",
+            content:`${this.result.template.outputDirectory}/${this.result.template.templateFilename}.md`,
+            contentCls:["from-template-code-span"], 
+            rowCls:["from-template-control-row-minimal-space"],
+            keyDisplay:"⌘+"}
+            )
+
+        separator()
 
         //Create each of the fields
         console.debug("Fields",this.result.template.fields)
         this.result.template.fields.forEach( (field,index) => {
             this.createInput(contentEl,this.result.data,field,setValue,index)
         })
-
-        const makeSubcontrol = (el:HTMLElement,title:string,content:string="",cls:string[]=[]) => {
-            const sc = contentEl.createDiv({cls:["from-template-subsection","setting-item-description"]})
-            sc.createSpan({text: `${title}:`,cls:"from-template-sublabel"}) 
-            return sc.createSpan({text: `${content}`,cls:["from-template-subcontrol",...cls]}) 
-        }
-        contentEl.createEl("hr",{cls:"from-template-section-sep"})
-
         // An info box...
-        makeSubcontrol(contentEl,"Template",`${this.result.templateID.name}`)
-        makeSubcontrol(contentEl,"Destination",
-            `${this.result.template.outputDirectory}/${this.result.template.templateFilename}.md`,
-            ["from-template-code-span"]
-            )
-
         // And the extra controls at the bottom
 
         /* Should text be replaced? It's a combination of:
@@ -87,7 +121,10 @@ export class TemplateInputUI extends Modal {
             replacementText.setValue(r)
             this.result.textReplacementString = r
         }
-        const replaceSetting = new Setting(contentEl)
+
+        
+        separator()
+        new Setting(contentEl.createDiv({cls:"from-template-control-row-undivided"}))
         .setName("Replace selected text")
         //.setDesc(("String to replace selection with. Template fields: "+))
         //.setDesc(("String to replace selection with."))
@@ -99,18 +136,19 @@ export class TemplateInputUI extends Modal {
             }))
 
         //const repDiv = contentEl.createEl("div", {text: "Replacement: ", cls:"setting-item-description"})
-        const repDiv = makeSubcontrol(contentEl,"Replacement")
+        const repDiv = makeSubcontrol(contentEl,{title:"Replacement"})
         replacementText = new TextComponent(repDiv)
             .setValue(this.result.textReplacementString)
             .onChange((value) => {
                 this.result.textReplacementString =  value
             })
             .setDisabled(!willReplace());
+            replacementText.inputEl.addClass("from-template-subcontrol")
         //replacementText.inputEl.size = 60
 
 
 
-        const availFields = makeSubcontrol(contentEl,"Available")
+        const availFields = makeSubcontrol(contentEl,{title:"Available fields",description:"for replacement string"})
         //const availFields = contentEl.createEl("div", {text: "Available fields: " , cls:"setting-item-description"})
         fieldNames.forEach(f => {
             const s = availFields.createEl("button",{text:f, cls:["from-template-inline-code-button"]})
@@ -119,7 +157,7 @@ export class TemplateInputUI extends Modal {
         
 
         // Create buttons for the alternative replacements
-        const alternatives = makeSubcontrol(contentEl,"Replacements")
+        const alternatives = makeSubcontrol(contentEl,{title:"Replacements",description:"specified in the template",keyDisplay:"^"})
         //const alternatives = contentEl.createEl("div", { text: `Replacements:`, cls:["setting-item-description","from-template-command-list"]})
         this.result.template.textReplacementTemplates.forEach( (r,i) => {
             const el = new ButtonComponent(alternatives)
@@ -129,7 +167,8 @@ export class TemplateInputUI extends Modal {
             this.scope.register(['Ctrl'],`${i+1}`,()=>setReplaceText(r))
         })
 
-        new Setting(contentEl)
+        separator()
+        new Setting(contentEl.createDiv({cls:"from-template-control-row-undivided"}))
         .setName("Create and open note")
         .setDesc(("Should the note be created / opened?"))
         .addDropdown((dropdown) => {
@@ -164,9 +203,13 @@ export class TemplateInputUI extends Modal {
         }
 
 		//And a submit button
-		contentEl.createDiv({cls:"from-template-section"})
+		const addDiv = contentEl.createDiv({cls:"from-template-control-row"})
+        addDiv.createDiv({cls:"from-template-description-column"})
+        addDiv.createDiv({cls:"from-template-control-column"})
             .createEl('button', { text: "Add", cls:"from-template-submit" })
                 .addEventListener("click",submitTemplate);
+        addDiv.createDiv({cls:"from-template-key-column"})
+            .createDiv({ text: "↩", cls:"from-template-shortkey" })
         this.scope.register(['Mod'],"enter",() => { submitTemplate() } )
         contentEl.appendChild(lowerError)
 
@@ -178,27 +221,45 @@ export class TemplateInputUI extends Modal {
 	 * - creates a control, base on a field type. The 'field' parameter is taken from the template, and can be given as field:type
 	*/
 	createInput(parent:HTMLElement, data:Record<string,string>, field:TemplateField, setTemplateValue:(k:string,v:any)=>void, index:number=-1, initial:string=""){
-
         const id = field.id
-        const inputType = field.inputType
-
         /*
          * Some fields don't need UI...
          */
-        // Moved currentdate into fields that *do* need UI!
         if(id === "currentTitle") return;
         if(id === "currentPath") return;
   
-        // Create div and label
-		const controlEl = parent.createEl('div',{cls:"from-template-section"});
-        
-		const labelText = index < 9 ? `${field.description} (${index+1}): ` : `${field.description}: `;
-		const labelContainer = controlEl.createEl("div", {cls:"from-template-label"})
-		const label = labelContainer.createEl("label", {text: labelText})
-		label.htmlFor = id
+        // Create row, then a container for the label, the control and any hotkey
+		const controlEl = parent.createEl('div',{cls:"from-template-control-row"});
+		const labelContainer = controlEl.createEl("label", {cls:"from-template-description-column"})
+		labelContainer.createEl("label", {text: `${ucFirst(field.id)}`, cls:"from-template-label-text"})
+        if( field.description && field.description.length > 0 )
+		    labelContainer.createDiv({text: field.description, cls:"from-template-label-description"})
+		labelContainer.htmlFor = id
 
         //console.debug(`Creating field with initial: '${initial}'`,field)
-         
+
+		const controlWrapper = controlEl.createEl('div',{cls:"from-template-control-column"});
+
+        const element = this.createInputControl(controlWrapper, data, field, setTemplateValue, index, initial)
+		const keyEl = controlEl.createEl('div',{cls:"from-template-key-column"});
+
+
+        if( element ) {
+            if( index === 0 ) element.focus()
+            element.addClass("from-template-control")
+            if( index <= 8 ) {
+                this.scope.register(["Mod"],`${index+1}`,()=>element.focus())
+                keyEl.createEl("div", {text: `${index+1}`, cls:"from-template-shortkey"}) 
+            }
+        }
+        
+	}
+
+	createInputControl(controlEl:HTMLElement, data:Record<string,string>, field:TemplateField, setTemplateValue:(k:string,v:any)=>void, index:number=-1, initial:string=""){ 
+
+        const id = field.id
+        const inputType = field.inputType
+                 
         //Put the data into the record to start
         if( initial) data[field.id] = initial;
 
@@ -211,8 +272,8 @@ export class TemplateInputUI extends Modal {
             .onChange((value) => setTemplateValue(id,value))
             t.inputEl.rows = 5;
             element = t.inputEl
-            if( field.args[0] && field.args[0].length ) 
-                labelContainer.createEl("div", {text: field.args[0], cls:"from-template-description"})
+            //if( field.args[0] && field.args[0].length ) 
+                //labelContainer.createEl("div", {text: field.args[0], cls:"from-template-description"})
         }
         else if( inputType === "text") {
             const initial = data[id] || (field.args.length ? field.args[0] : "")
@@ -231,8 +292,8 @@ export class TemplateInputUI extends Modal {
                 if( id === "tags") new TagSuggest(element as HTMLInputElement,this.app, cb)
                 else new LinkSuggest(element as HTMLInputElement, this.app, cb)
             }
-            if( field.args[1] && field.args[1].length )
-                labelContainer.createEl("div", {text: field.args[1], cls:"from-template-description"})
+            //if( field.args[1] && field.args[1].length )
+                //labelContainer.createEl("div", {text: field.args[1], cls:"from-template-description"})
         }
         else if( inputType === "note-title") {
             const initial = data[id] || (field.args.length ? field.args[0] : "") 
@@ -300,15 +361,10 @@ export class TemplateInputUI extends Modal {
             t.inputEl.size = 50
             element = t.inputEl
         }
+        return element
+    }
 
 
-        if( element ) {
-            if( index === 0 ) element.focus()
-            element.addClass("from-template-control")
-            if( index <= 8 ) this.scope.register(["Mod"],`${index+1}`,()=>element.focus())
-        }
-        
-	}
 
 	onClose() {
 		let {contentEl} = this;

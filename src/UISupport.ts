@@ -32,7 +32,6 @@ export class FolderCreateUI extends Modal {
             badDiv.createEl('span',{text: " / "})
         }
         contentEl.createEl('hr')
-		//const submits = contentEl.createDiv({cls:"from-template-section"})
 		const submits = contentEl.createDiv()
         const createFolder = () => {
             this.app.vault.createFolder(this.input.path)

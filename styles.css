@@ -1,77 +1,136 @@
-/* Sets all the text color to red! */
-
-
 /* Submit button */
-
 .from-template-submit {
     font-size:x-large;
+    width: 100%;
 }
 
-.from-template-label {
-    font-size:large;
+/* Title Element */ 
+.from-template-title {
+    margin-bottom: 0px;
+}
+
+
+/* one of the rows in the template UI */
+.from-template-control-row {
+    padding: 6pt 0pt;
     vertical-align: top;
-    display: inline-block;
-    max-width:100pt;
-    padding-right:3pt;
-}
-
-.from-template-description {
-    font-size:small;
-    color: var(--text-muted);
-}
-
-.from-template-control {
-    font-size:large;
     width: 400pt;
+}
+
+.from-template-control-row-minimal-space {
+    padding: 0pt 0pt;
+
+}
+
+/* Container div for doing a row that is not divided, e.g. a Setting */
+.from-template-control-row-undivided {
+    padding: 2pt 0pt;
+    vertical-align: top;
+    width: 375pt;
+}
+
+/* Container for the label/description of each row */
+.from-template-description-column {
+    width: 80pt;
+    vertical-align: top;
+    padding-right:3pt;
+    display: inline-block;
+    text-align: right;
+}
+
+/* Container for main control of each row*/
+.from-template-control-column {
+    width: fit-content;
+    vertical-align: top;
+    width: 295pt;
     padding: 0;
     display: inline-block;
 }
 
+/* Container for little additional column on the end for showing shortkeys */
+.from-template-key-column {
+    width: 20pt;
+    vertical-align: top;
+    display: inline-block;
+}
+
+/* Default styling for control label main text */
+.from-template-label-text {
+}
+
+/* Default styling for control label description text */
+.from-template-label-description {
+    font-size:small;
+    color: var(--text-muted);
+}
+
+/* Default styling for the main control in a row*/
+.from-template-control {
+    font-size:large;
+    width: 100%;
+}
+
+/* Ruler that separates sections of the template UI */
 .from-template-section-sep {
-    margin-top:0;
+    margin-top:2pt;
     margin-bottom:0;
 }
 
-.from-template-section {
-    padding: 6pt;
-    text-align:right;
-}
-
-.from-template-subsection {
-    padding: 0pt;
-    text-align:right;
-}
+/* Default label for the smaller control sections */
 .from-template-sublabel {
-    vertical-align: top;
-    padding: 0pt 6pt;
+    font-size:small;
+    /*color: var(--text-muted);*/
 }
+/* Styling of the minor control fields */
 .from-template-subcontrol {
-    display: inline-block;
-    width: 400pt;
-    padding: 3pt 6pt;
-    text-align:left;
+    font-size:small;
+    color: var(--text-muted);
+    width:100%;
+}
+/* General style for putting things into muted monospace */
+.from-template-code-span {
+    font-family:monospace;
+    font-size: medium;
+    color: var(--text-muted);
 }
 
 
-
+/* These are part of the error display / handling styles */
 .from-template-error-text {
     color: #f00
 }
 .from-template-ok-text {
     color: #afa
 }
-
-.from-template-code-span {
-    font-family:monospace;
-    color: var(--text-normal);
+.from-template-Error {
+    border: 2px solid red;
 }
-.from-template-inline-code-button {
+
+/* Showing the key commands */
+.from-template-shortkey {
     font-family: monospace;
     color: var(--text-normal);
-    padding: 2px 6px;
+    font-size: small;
+    padding: 1pt 4pt;
     margin-left: 4px;
     margin-right: 4px;
     border: 1px solid var(--interactive-accent);
+    border-radius: 3pt;
+    height:auto;
+    width:100%;
+    text-align: center;
+}
+
+/* Showing available fields for replacement text */
+.from-template-inline-code-button {
+    font-family: monospace;
+    color: var(--text-normal);
+    font-size: small;
+    padding: 1pt 4pt;
+    margin-left: 4px;
+    margin-right: 4px;
+    border: 1px solid var(--interactive-accent);
+    height:auto;
 }
 .from-template-inline-code-button:hover {
     color: var(--interactive-accent);
@@ -79,13 +138,6 @@
 
 .from-template-command-list {
     max-width: 80%;
-}
-
-.from-template-OK {
-    border: 2px solid green;
-}
-.from-template-Error {
-    border: 2px solid red;
 }
 
 .from-template-folder-container {
