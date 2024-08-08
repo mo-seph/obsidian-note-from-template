@@ -120,7 +120,7 @@ Some hotkeys are defined:
 Very open to collaboration - drop me a line or PR
 ## Changelog
 
-### 0.1.12
+### 0.1.13
 - Tidied up styling
 - Added in support for escaping delimiters in fields (e.g. `hh\:mm\:ss` for a time value)
 - Added in descriptions for fields with a `|` character, e.g `{{field|description}}` which will be shown in the template UI.
