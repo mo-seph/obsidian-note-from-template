@@ -157,7 +157,7 @@ export class TemplateInputUI extends Modal {
         
 
         // Create buttons for the alternative replacements
-        const alternatives = makeSubcontrol(contentEl,{title:"Replacements",description:"specified in the template",keyDisplay:"^"})
+        const alternatives = makeSubcontrol(contentEl,{title:"Replacements",description:"specified in the template",keyDisplay:"^+"})
         //const alternatives = contentEl.createEl("div", { text: `Replacements:`, cls:["setting-item-description","from-template-command-list"]})
         this.result.template.textReplacementTemplates.forEach( (r,i) => {
             const el = new ButtonComponent(alternatives)
