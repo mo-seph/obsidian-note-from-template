@@ -2,13 +2,17 @@
 .from-template-submit {
     font-size:x-large;
     width: 100%;
+    height: 100%;
 }
 
 /* Title Element */ 
 .from-template-title {
-    margin-bottom: 0px;
+    text-align: center;
 }
 
+.from-template-section-title{
+    text-align: center;
+}
 
 /* one of the rows in the template UI */
 .from-template-control-row {

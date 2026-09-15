@@ -1,6 +1,6 @@
-import typescript from '@rollup/plugin-typescript';
 import {nodeResolve} from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import typescript from '@rollup/plugin-typescript'; //https://www.npmjs.com/package/@rollup/plugin-typescript
 
 const isProd = (process.env.BUILD === 'production');
 
@@ -18,10 +18,10 @@ export default {
     sourcemap: 'inline',
     sourcemapExcludeSources: isProd,
     format: 'cjs',
-    exports: 'default',
+    exports: 'named', //Type:	"auto" | "default" | "named" | "none". Default "auto".
     banner,
   },
-  external: ['obsidian'],
+  external: ['obsidian'],// Keep Obsidian runtime APIs out of the bundle; they are provided by the host app.
   plugins: [
     typescript(),
     nodeResolve({browser: true}),

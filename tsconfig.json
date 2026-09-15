@@ -1,19 +1,22 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "rootDir": ".",
+    "outDir": "dist",
+    "target": "es2025",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowJs": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    // "allowImportingTsExtensions": false,
     "inlineSourceMap": true,
     "inlineSources": true,
-    "module": "ESNext",
-    "target": "es6",
-    "allowJs": true,
     "noImplicitAny": true,
-    "moduleResolution": "node",
     "importHelpers": true,
     "lib": [
       "dom",
-      "es5",
+      "ES2025",
       "scripthost",
-      "es2015"
     ]
   },
   "include": [

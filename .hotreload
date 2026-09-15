@@ -1,0 +1,9 @@
+Implementation of:
+https://github.com/pjeby/hot-reload
+
+run:
+´´´bash
+npm run dev
+´´´
+
+with the ´hot-reload´ plugin enabled on your obsidian vault
