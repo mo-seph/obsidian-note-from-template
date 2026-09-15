@@ -62,14 +62,17 @@ export default class FT_Plugin extends Plugin {
 			},
 		});
 
-		if (!this.ensureTemplateDirectoryConfigured(settings)) {
-			return;
-		}
-
-		// This pluggin does not depend on Layout ready, but i left this here just in case
+		// Defer the folder check & template indexing until the workspace layout is ready.
+		// During `onload` the vault index is not yet populated, so checkIfFolderExists
+		// would incorrectly report existing folders as missing and open the settings
+		// tab prematurely on every startup.
 		// https://docs.obsidian.md/Reference/TypeScript+API/Workspace/onLayoutReady
-		// this.app.workspace.onLayoutReady(async () => { "Layout Ready" });
-		this.indexTemplates(settings);
+		this.app.workspace.onLayoutReady(() => {
+			if (!this.ensureTemplateDirectoryConfigured(settings)) {
+				return;
+			}
+			this.indexTemplates(settings);
+		});
 	}
 
 	async onunload() {
